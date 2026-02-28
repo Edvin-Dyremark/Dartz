@@ -3,7 +3,6 @@ package com.dyre.dartz.ui.game.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -18,91 +17,93 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import com.dyre.dartz.model.DartScore
 import com.dyre.dartz.util.DartboardGeometry
 import com.dyre.dartz.util.PolarCoordinates
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 
 @Composable
 fun Dartboard(
     onDartThrown: (DartScore, Offset) -> Unit,
-    landingMarkers: List<Offset> = emptyList(),
     modifier: Modifier = Modifier,
+    landingMarkers: List<Offset> = emptyList(),
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var isDragging by remember { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    Canvas(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-    ) {
-        val size = constraints.maxWidth.toFloat()
-        val center = Offset(size / 2f, size / 2f)
-        val boardRadius = size / 2f
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .pointerInput(Unit) {
-                    detectTapGestures { tapOffset ->
-                        if (!isDragging) {
-                            val score = PolarCoordinates.resolve(tapOffset, center, boardRadius)
-                            onDartThrown(score, tapOffset)
-                        }
+            .pointerInput(Unit) {
+                detectTapGestures { tapOffset ->
+                    if (!isDragging) {
+                        val s = min(size.width, size.height).toFloat()
+                        val center = Offset(s / 2f, s / 2f)
+                        val boardRadius = s / 2f
+                        val score = PolarCoordinates.resolve(tapOffset, center, boardRadius)
+                        onDartThrown(score, tapOffset)
                     }
                 }
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            magnifierPosition = offset
-                        },
-                        onDrag = { change, _ ->
-                            magnifierPosition = change.position
-                        },
-                        onDragEnd = {
-                            magnifierPosition?.let { pos ->
-                                val score = PolarCoordinates.resolve(pos, center, boardRadius)
-                                onDartThrown(score, pos)
-                            }
-                            magnifierPosition = null
-                            isDragging = false
-                        },
-                        onDragCancel = {
-                            magnifierPosition = null
-                            isDragging = false
-                        },
-                    )
-                }
-        ) {
-            drawDartboard(center, boardRadius)
-            drawNumberLabels(center, boardRadius)
-
-            // Draw landing markers
-            landingMarkers.forEach { markerPos ->
-                drawCircle(
-                    color = Color.White,
-                    radius = 6f,
-                    center = markerPos,
-                    style = Fill,
-                )
-                drawCircle(
-                    color = Color.Black,
-                    radius = 6f,
-                    center = markerPos,
-                    style = Stroke(width = 2f),
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        isDragging = true
+                        magnifierPosition = offset
+                    },
+                    onDrag = { change, _ ->
+                        magnifierPosition = change.position
+                    },
+                    onDragEnd = {
+                        magnifierPosition?.let { pos ->
+                            val s = min(size.width, size.height).toFloat()
+                            val center = Offset(s / 2f, s / 2f)
+                            val boardRadius = s / 2f
+                            val score = PolarCoordinates.resolve(pos, center, boardRadius)
+                            onDartThrown(score, pos)
+                        }
+                        magnifierPosition = null
+                        isDragging = false
+                    },
+                    onDragCancel = {
+                        magnifierPosition = null
+                        isDragging = false
+                    },
                 )
             }
+    ) {
+        val s = min(size.width, size.height)
+        val center = Offset(s / 2f, s / 2f)
+        val boardRadius = s / 2f
 
-            // Draw magnifier
-            magnifierPosition?.let { pos ->
-                drawMagnifier(pos, center, boardRadius)
-            }
+        drawDartboard(center, boardRadius)
+        drawNumberLabels(center, boardRadius)
+
+        // Draw landing markers
+        landingMarkers.forEach { markerPos ->
+            drawCircle(
+                color = Color.White,
+                radius = 6f,
+                center = markerPos,
+                style = Fill,
+            )
+            drawCircle(
+                color = Color.Black,
+                radius = 6f,
+                center = markerPos,
+                style = Stroke(width = 2f),
+            )
+        }
+
+        // Draw magnifier
+        magnifierPosition?.let { pos ->
+            drawMagnifier(pos, center, boardRadius)
         }
     }
 }
@@ -222,7 +223,6 @@ private fun DrawScope.drawAnnularSector(
 }
 
 private fun DrawScope.drawNumberLabels(center: Offset, boardRadius: Float) {
-    // Place numbers inside the double ring (centered between outer single and double outer)
     val labelRadius = boardRadius * ((DartboardGeometry.OUTER_SINGLE_OUTER + DartboardGeometry.DOUBLE_OUTER) / 2f)
     val textPaint = android.graphics.Paint().apply {
         this.color = android.graphics.Color.WHITE
@@ -232,19 +232,21 @@ private fun DrawScope.drawNumberLabels(center: Offset, boardRadius: Float) {
         isAntiAlias = true
     }
 
-    for (segIdx in 0 until 20) {
-        val number = DartboardGeometry.SEGMENT_ORDER[segIdx]
-        val angleDeg = segIdx * DartboardGeometry.SEGMENT_ANGLE
-        val angleRad = Math.toRadians((angleDeg - 90f).toDouble())
-        val x = center.x + labelRadius * cos(angleRad).toFloat()
-        val y = center.y + labelRadius * sin(angleRad).toFloat()
+    drawIntoCanvas { canvas ->
+        for (segIdx in 0 until 20) {
+            val number = DartboardGeometry.SEGMENT_ORDER[segIdx]
+            val angleDeg = segIdx * DartboardGeometry.SEGMENT_ANGLE
+            val angleRad = Math.toRadians((angleDeg - 90f).toDouble())
+            val x = center.x + labelRadius * cos(angleRad).toFloat()
+            val y = center.y + labelRadius * sin(angleRad).toFloat()
 
-        drawContext.canvas.nativeCanvas.drawText(
-            number.toString(),
-            x,
-            y + textPaint.textSize / 3f,
-            textPaint,
-        )
+            canvas.nativeCanvas.drawText(
+                number.toString(),
+                x,
+                y + textPaint.textSize / 3f,
+                textPaint,
+            )
+        }
     }
 }
 
@@ -257,23 +259,24 @@ private fun DrawScope.drawMagnifier(
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
     val zoom = 2.0f
 
-    drawContext.canvas.nativeCanvas.save()
-    val clipPath = android.graphics.Path()
-    clipPath.addCircle(magnifierCenter.x, magnifierCenter.y, magnifierRadius, android.graphics.Path.Direction.CW)
-    drawContext.canvas.nativeCanvas.clipPath(clipPath)
+    drawIntoCanvas { canvas ->
+        canvas.nativeCanvas.save()
+        val clipPath = android.graphics.Path()
+        clipPath.addCircle(magnifierCenter.x, magnifierCenter.y, magnifierRadius, android.graphics.Path.Direction.CW)
+        canvas.nativeCanvas.clipPath(clipPath)
 
-    // Draw zoomed dartboard centered on the touch position
-    drawContext.canvas.nativeCanvas.translate(
-        magnifierCenter.x - position.x * zoom,
-        magnifierCenter.y - position.y * zoom,
-    )
-    drawContext.canvas.nativeCanvas.scale(zoom, zoom)
+        // Draw zoomed dartboard centered on the touch position
+        canvas.nativeCanvas.translate(
+            magnifierCenter.x - position.x * zoom,
+            magnifierCenter.y - position.y * zoom,
+        )
+        canvas.nativeCanvas.scale(zoom, zoom)
 
-    // Redraw the board inside the magnifier
-    drawDartboard(boardCenter, boardRadius)
+        // Redraw the board inside the magnifier
+        drawDartboard(boardCenter, boardRadius)
 
-    // Restore from clip
-    drawContext.canvas.nativeCanvas.restore()
+        canvas.nativeCanvas.restore()
+    }
 
     // Magnifier border
     drawCircle(
@@ -306,18 +309,21 @@ private fun DrawScope.drawMagnifier(
         color = android.graphics.Color.argb(180, 0, 0, 0)
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawRoundRect(
-        magnifierCenter.x - textWidth / 2f - pillPadH,
-        labelY - labelPaint.textSize - pillPadV,
-        magnifierCenter.x + textWidth / 2f + pillPadH,
-        labelY + pillPadV,
-        16f, 16f,
-        bgPaint,
-    )
-    drawContext.canvas.nativeCanvas.drawText(
-        labelText,
-        magnifierCenter.x,
-        labelY,
-        labelPaint,
-    )
+
+    drawIntoCanvas { canvas ->
+        canvas.nativeCanvas.drawRoundRect(
+            magnifierCenter.x - textWidth / 2f - pillPadH,
+            labelY - labelPaint.textSize - pillPadV,
+            magnifierCenter.x + textWidth / 2f + pillPadH,
+            labelY + pillPadV,
+            16f, 16f,
+            bgPaint,
+        )
+        canvas.nativeCanvas.drawText(
+            labelText,
+            magnifierCenter.x,
+            labelY,
+            labelPaint,
+        )
+    }
 }
