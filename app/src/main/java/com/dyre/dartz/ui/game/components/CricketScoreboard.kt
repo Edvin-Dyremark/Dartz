@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -92,7 +93,7 @@ fun CricketScoreboard(
             ) {
                 // Number label
                 Box(
-                    modifier = Modifier.size(width = 40.dp, height = 28.dp),
+                    modifier = Modifier.size(width = 40.dp, height = 24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -116,8 +117,8 @@ fun CricketScoreboard(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .background(bgColor)
-                            .padding(vertical = 2.dp),
+                            .height(24.dp)
+                            .background(bgColor),
                         contentAlignment = Alignment.Center,
                     ) {
                         MarkIndicator(marks = marks)
@@ -210,7 +211,7 @@ private fun MarkIndicator(marks: Int) {
             // 3+ marks: X inside a circle
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(18.dp)
                     .border(width = 2.dp, color = color, shape = CircleShape),
                 contentAlignment = Alignment.Center,
             ) {

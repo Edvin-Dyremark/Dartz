@@ -74,13 +74,6 @@ fun GameScreen(
         }.toSet()
     } else emptySet()
 
-    val activeNumbers = if (viewModel.isCricket) {
-        CricketGameEngine.CRICKET_NUMBERS.filter { number ->
-            val key = "${CricketGameEngine.MARKS_KEY_PREFIX}$number"
-            ((currentPlayer.extras[key] as? Int) ?: 0) >= 3 && number !in deadNumbers
-        }.toSet()
-    } else emptySet()
-
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -103,9 +96,15 @@ fun GameScreen(
                 )
             }
 
-            // 2. Current player name + score + darts (skip in cricket — scoreboard has it)
-            if (!viewModel.isCricket) {
-                Spacer(modifier = Modifier.height(8.dp))
+            // 2. Current player name + score + darts
+            Spacer(modifier = Modifier.height(8.dp))
+            if (viewModel.isCricket) {
+                Text(
+                    text = currentPlayer.player.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            } else {
                 PlayerTurnBanner(
                     playerName = currentPlayer.player.name,
                     score = currentPlayer.score,
@@ -125,8 +124,6 @@ fun GameScreen(
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
                 deadNumbers = deadNumbers,
-                activeNumbers = activeNumbers,
-                activeHighlightColor = MaterialTheme.colorScheme.primaryContainer,
             )
 
             // 4. Action buttons at bottom
