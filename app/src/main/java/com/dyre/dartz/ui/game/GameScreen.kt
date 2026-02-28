@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dyre.dartz.game.impl.CricketGameEngine
+import com.dyre.dartz.ui.game.components.CricketScoreboard
 import com.dyre.dartz.ui.game.components.Dartboard
 import com.dyre.dartz.ui.game.components.PlayerTurnBanner
 import com.dyre.dartz.ui.game.components.Scoreboard
@@ -64,6 +66,21 @@ fun GameScreen(
     val currentPlayer = state.players[state.currentPlayerIndex]
     val threwThreeDarts = state.currentDartIndex >= 3
 
+    // Compute cricket-specific sets
+    val deadNumbers = if (viewModel.isCricket) {
+        CricketGameEngine.CRICKET_NUMBERS.filter { number ->
+            val key = "${CricketGameEngine.MARKS_KEY_PREFIX}$number"
+            state.players.all { ((it.extras[key] as? Int) ?: 0) >= 3 }
+        }.toSet()
+    } else emptySet()
+
+    val activeNumbers = if (viewModel.isCricket) {
+        CricketGameEngine.CRICKET_NUMBERS.filter { number ->
+            val key = "${CricketGameEngine.MARKS_KEY_PREFIX}$number"
+            ((currentPlayer.extras[key] as? Int) ?: 0) < 3 && number !in deadNumbers
+        }.toSet()
+    } else emptySet()
+
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -73,10 +90,18 @@ fun GameScreen(
         ) {
             // 1. All player scores at top
             Spacer(modifier = Modifier.height(8.dp))
-            Scoreboard(
-                players = state.players,
-                currentPlayerIndex = state.currentPlayerIndex,
-            )
+            if (viewModel.isCricket) {
+                CricketScoreboard(
+                    players = state.players,
+                    currentPlayerIndex = state.currentPlayerIndex,
+                    deadNumbers = deadNumbers,
+                )
+            } else {
+                Scoreboard(
+                    players = state.players,
+                    currentPlayerIndex = state.currentPlayerIndex,
+                )
+            }
 
             // 2. Current player name + score + darts
             Spacer(modifier = Modifier.height(8.dp))
@@ -97,6 +122,8 @@ fun GameScreen(
                     .padding(horizontal = 2.dp),
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
+                deadNumbers = deadNumbers,
+                activeNumbers = activeNumbers,
             )
 
             // 4. Action buttons at bottom
