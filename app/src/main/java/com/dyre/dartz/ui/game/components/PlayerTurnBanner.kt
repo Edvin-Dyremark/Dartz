@@ -45,7 +45,7 @@ fun PlayerTurnBanner(
                 for (i in 0 until 3) {
                     val dart = dartsThisRound.getOrNull(i)
                     Text(
-                        text = dart?.shortName ?: "\u2014",
+                        text = dart?.points?.toString() ?: "\u2014",
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (dart != null) MaterialTheme.colorScheme.onBackground
                         else MaterialTheme.colorScheme.onSurfaceVariant,

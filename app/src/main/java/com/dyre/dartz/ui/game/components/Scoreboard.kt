@@ -62,7 +62,7 @@ fun Scoreboard(
                 )
                 if (playerState.lastRoundDarts.isNotEmpty()) {
                     Text(
-                        text = playerState.lastRoundDarts.joinToString(", ") { it.shortName },
+                        text = playerState.lastRoundDarts.joinToString(", ") { it.points.toString() },
                         style = MaterialTheme.typography.labelSmall,
                         color = textColor.copy(alpha = 0.5f),
                     )
