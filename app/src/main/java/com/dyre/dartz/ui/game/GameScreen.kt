@@ -77,7 +77,7 @@ fun GameScreen(
     val activeNumbers = if (viewModel.isCricket) {
         CricketGameEngine.CRICKET_NUMBERS.filter { number ->
             val key = "${CricketGameEngine.MARKS_KEY_PREFIX}$number"
-            ((currentPlayer.extras[key] as? Int) ?: 0) < 3 && number !in deadNumbers
+            ((currentPlayer.extras[key] as? Int) ?: 0) >= 3 && number !in deadNumbers
         }.toSet()
     } else emptySet()
 
