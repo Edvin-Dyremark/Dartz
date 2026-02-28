@@ -77,24 +77,23 @@ fun GameScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 1. Current player turn info with darts
-            PlayerTurnBanner(
-                playerName = currentPlayer.player.name,
-                score = currentPlayer.score,
-                dartsThisRound = state.dartsThisRound,
-            )
-
-            // 2. All player scores
+            // 1. All player scores at top
             Spacer(modifier = Modifier.height(8.dp))
             Scoreboard(
                 players = state.players,
                 currentPlayerIndex = state.currentPlayerIndex,
             )
 
-            // Small gap before dartboard
-            Spacer(modifier = Modifier.height(4.dp))
+            // 2. Current player turn info
+            Spacer(modifier = Modifier.height(8.dp))
+            PlayerTurnBanner(
+                playerName = currentPlayer.player.name,
+                score = currentPlayer.score,
+                dartsThisRound = state.dartsThisRound,
+            )
 
-            // 3. Dartboard
+            // 3. Dartboard with padding (touch extends into padding)
+            Spacer(modifier = Modifier.height(12.dp))
             Dartboard(
                 onDartThrown = { score, position ->
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)

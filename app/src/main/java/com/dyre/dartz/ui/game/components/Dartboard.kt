@@ -47,11 +47,11 @@ fun Dartboard(
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Outer Box extends touch area below the board
+    // Outer Box extends touch area above and below the board
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 40.dp)
+            .padding(top = 24.dp, bottom = 40.dp)
             .pointerInput(Unit) {
                 coroutineScope {
                     awaitPointerEventScope {
@@ -99,7 +99,7 @@ fun Dartboard(
                     }
                 }
             },
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment = Alignment.Center,
     ) {
         Canvas(
             modifier = Modifier
