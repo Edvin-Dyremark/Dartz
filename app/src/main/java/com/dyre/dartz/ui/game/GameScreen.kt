@@ -24,8 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dyre.dartz.game.impl.CricketGameEngine
+import com.dyre.dartz.game.impl.KillerGameEngine
 import com.dyre.dartz.ui.game.components.CricketScoreboard
 import com.dyre.dartz.ui.game.components.Dartboard
+import com.dyre.dartz.ui.game.components.KillerScoreboard
 import com.dyre.dartz.ui.game.components.PlayerTurnBanner
 import com.dyre.dartz.ui.game.components.Scoreboard
 
@@ -77,6 +79,25 @@ fun GameScreen(
         }.toSet()
     } else emptySet()
 
+    // Compute killer-specific sets
+    val killerNumbers = if (viewModel.isKiller) {
+        state.players.mapNotNull { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int }
+            .filter { it > 0 }
+            .toSet()
+    } else emptySet()
+
+    val killerDeadNumbers = if (viewModel.isKiller) {
+        state.players.filter {
+            val claimed = it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
+            val lives = it.extras[KillerGameEngine.LIVES_KEY] as? Int ?: 0
+            claimed > 0 && lives <= 0
+        }.map { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as Int }.toSet()
+    } else emptySet()
+
+    val allClaimed = viewModel.isKiller && state.players.all {
+        (it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0) > 0
+    }
+
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -91,6 +112,11 @@ fun GameScreen(
                     players = state.players,
                     currentPlayerIndex = state.currentPlayerIndex,
                     deadNumbers = deadNumbers,
+                )
+            } else if (viewModel.isKiller) {
+                KillerScoreboard(
+                    players = state.players,
+                    currentPlayerIndex = state.currentPlayerIndex,
                 )
             } else {
                 Scoreboard(
@@ -119,6 +145,10 @@ fun GameScreen(
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
                 deadNumbers = deadNumbers,
+                isKiller = viewModel.isKiller,
+                killerNumbers = killerNumbers,
+                killerDeadNumbers = killerDeadNumbers,
+                allKillersClaimed = allClaimed,
             )
 
             // 4. Action buttons at bottom

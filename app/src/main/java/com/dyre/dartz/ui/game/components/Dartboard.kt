@@ -43,6 +43,10 @@ fun Dartboard(
     landingMarkers: List<Offset> = emptyList(),
     isCricket: Boolean = false,
     deadNumbers: Set<Int> = emptySet(),
+    isKiller: Boolean = false,
+    killerNumbers: Set<Int> = emptySet(),
+    killerDeadNumbers: Set<Int> = emptySet(),
+    allKillersClaimed: Boolean = false,
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
@@ -113,7 +117,7 @@ fun Dartboard(
             val center = Offset(s / 2f, s / 2f)
             val boardRadius = s / 2f
 
-            drawDartboard(center, boardRadius, isCricket, deadNumbers)
+            drawDartboard(center, boardRadius, isCricket, deadNumbers, isKiller, killerNumbers, killerDeadNumbers, allKillersClaimed)
             drawNumberLabels(center, boardRadius)
 
             landingMarkers.forEach { markerPos ->
@@ -121,7 +125,7 @@ fun Dartboard(
             }
 
             magnifierPosition?.let { pos ->
-                drawMagnifier(pos, center, boardRadius, isCricket, deadNumbers)
+                drawMagnifier(pos, center, boardRadius, isCricket, deadNumbers, isKiller, killerNumbers, killerDeadNumbers, allKillersClaimed)
             }
         }
     }
@@ -149,6 +153,10 @@ private fun DrawScope.drawDartboard(
     boardRadius: Float,
     isCricket: Boolean,
     deadNumbers: Set<Int> = emptySet(),
+    isKiller: Boolean = false,
+    killerNumbers: Set<Int> = emptySet(),
+    killerDeadNumbers: Set<Int> = emptySet(),
+    allKillersClaimed: Boolean = false,
 ) {
     val rings = listOf(
         DartboardGeometry.DOUBLE_OUTER to DartboardGeometry.Ring.DOUBLE,
@@ -160,7 +168,11 @@ private fun DrawScope.drawDartboard(
     for (segIdx in 0 until 20) {
         val segment = DartboardGeometry.SEGMENT_ORDER[segIdx]
         val startAngle = DartboardGeometry.START_ANGLE_OFFSET + segIdx * DartboardGeometry.SEGMENT_ANGLE
-        val isDimmed = isCricket && (segment !in CRICKET_NUMBERS || segment in deadNumbers)
+        val isDimmed = when {
+            isCricket -> segment !in CRICKET_NUMBERS || segment in deadNumbers
+            isKiller && allKillersClaimed -> segment !in killerNumbers || segment in killerDeadNumbers
+            else -> false
+        }
         for ((outerFrac, ring) in rings) {
             val innerFrac = when (ring) {
                 DartboardGeometry.Ring.DOUBLE -> DartboardGeometry.OUTER_SINGLE_OUTER
@@ -190,7 +202,7 @@ private fun DrawScope.drawDartboard(
         }
     }
 
-    val bullDimmed = isCricket && 25 in deadNumbers
+    val bullDimmed = (isCricket && 25 in deadNumbers) || (isKiller && allKillersClaimed)
 
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.OUTER_BULL),
@@ -313,6 +325,10 @@ private fun DrawScope.drawMagnifier(
     boardRadius: Float,
     isCricket: Boolean,
     deadNumbers: Set<Int> = emptySet(),
+    isKiller: Boolean = false,
+    killerNumbers: Set<Int> = emptySet(),
+    killerDeadNumbers: Set<Int> = emptySet(),
+    allKillersClaimed: Boolean = false,
 ) {
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
@@ -364,7 +380,7 @@ private fun DrawScope.drawMagnifier(
         )
         canvas.nativeCanvas.scale(zoom, zoom)
 
-        drawDartboard(boardCenter, boardRadius, isCricket, deadNumbers)
+        drawDartboard(boardCenter, boardRadius, isCricket, deadNumbers, isKiller, killerNumbers, killerDeadNumbers, allKillersClaimed)
 
         canvas.nativeCanvas.restore()
     }

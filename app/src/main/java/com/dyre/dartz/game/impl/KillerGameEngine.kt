@@ -13,7 +13,9 @@ class KillerGameEngine : GameEngine {
         const val CLAIMED_NUMBER_KEY = "claimedNumber"
         const val PHASE_KEY = "phase" // "claiming" or "killing"
         const val IS_KILLER_KEY = "isKiller"
+        const val MARKS_KEY = "marks"
         const val MAX_LIVES = 3
+        const val MARKS_TO_KILLER = 3
     }
 
     override fun createInitialState(config: GameConfig): GameState {
@@ -22,6 +24,7 @@ class KillerGameEngine : GameEngine {
             CLAIMED_NUMBER_KEY to 0,
             PHASE_KEY to "claiming",
             IS_KILLER_KEY to false,
+            MARKS_KEY to 0,
         )
         return GameState(
             players = config.players.map { PlayerState(it, MAX_LIVES, initialExtras) },
@@ -91,45 +94,51 @@ class KillerGameEngine : GameEngine {
         val isKiller = currentPlayer.extras[IS_KILLER_KEY] as? Boolean ?: false
         val claimedNumber = currentPlayer.extras[CLAIMED_NUMBER_KEY] as? Int ?: 0
 
-        // Hit own double to become a killer
-        if (dart.segment == claimedNumber && dart.isDouble && !isKiller) {
+        // Not yet a killer — hit own number to accumulate marks
+        if (!isKiller && dart.segment == claimedNumber) {
+            val currentMarks = (currentPlayer.extras[MARKS_KEY] as? Int) ?: 0
+            val newMarks = (currentMarks + dart.multiplier).coerceAtMost(MARKS_TO_KILLER)
+            val becomesKiller = newMarks >= MARKS_TO_KILLER
+
             val updatedPlayer = currentPlayer.copy(
-                extras = currentPlayer.extras + (IS_KILLER_KEY to true),
+                extras = currentPlayer.extras +
+                        (MARKS_KEY to newMarks) +
+                        (IS_KILLER_KEY to becomesKiller),
             )
             val updatedPlayers = state.players.toMutableList()
             updatedPlayers[state.currentPlayerIndex] = updatedPlayer
+
+            val message = if (becomesKiller) {
+                "${currentPlayer.player.name} is now a KILLER!"
+            } else {
+                "${currentPlayer.player.name} marks $newMarks/$MARKS_TO_KILLER"
+            }
+
             return state.copy(
                 players = updatedPlayers,
                 currentDartIndex = state.currentDartIndex + 1,
                 dartsThisRound = state.dartsThisRound + dart,
-                message = "${currentPlayer.player.name} is now a KILLER!",
+                message = message,
                 previousState = state,
             )
         }
 
-        // As a killer, hit opponents' doubles to remove lives
-        if (isKiller && dart.isDouble) {
+        // As a killer, hit an opponent's claimed number — remove multiplier lives
+        if (isKiller) {
             val targetIdx = state.players.indexOfFirst {
                 (it.extras[CLAIMED_NUMBER_KEY] as? Int) == dart.segment &&
-                        it.player.id != currentPlayer.player.id
+                        it.player.id != currentPlayer.player.id &&
+                        (it.extras[LIVES_KEY] as? Int ?: 0) > 0
             }
             if (targetIdx >= 0) {
                 val target = state.players[targetIdx]
-                val targetLives = (target.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - 1
+                val targetLives = ((target.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - dart.multiplier).coerceAtLeast(0)
                 val updatedPlayers = state.players.toMutableList()
 
-                if (targetLives <= 0) {
-                    // Target eliminated
-                    updatedPlayers[targetIdx] = target.copy(
-                        score = 0,
-                        extras = target.extras + (LIVES_KEY to 0),
-                    )
-                } else {
-                    updatedPlayers[targetIdx] = target.copy(
-                        score = targetLives,
-                        extras = target.extras + (LIVES_KEY to targetLives),
-                    )
-                }
+                updatedPlayers[targetIdx] = target.copy(
+                    score = targetLives,
+                    extras = target.extras + (LIVES_KEY to targetLives),
+                )
 
                 // Check win: only one player with lives > 0
                 val alive = updatedPlayers.filter { (it.extras[LIVES_KEY] as? Int ?: 0) > 0 }
@@ -142,18 +151,18 @@ class KillerGameEngine : GameEngine {
                     isGameOver = isWin,
                     winnerId = if (isWin) alive.first().player.id else null,
                     message = if (isWin) "${alive.first().player.name} wins!"
-                    else "${target.player.name} loses a life! ($targetLives remaining)",
+                    else "${target.player.name} loses ${dart.multiplier} ${if (dart.multiplier == 1) "life" else "lives"}! ($targetLives remaining)",
                     previousState = state,
                 )
             }
 
-            // Hit own double as killer — lose a life yourself
+            // Hit own number as killer — lose multiplier lives yourself
             if (dart.segment == claimedNumber) {
-                val selfLives = (currentPlayer.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - 1
+                val selfLives = ((currentPlayer.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - dart.multiplier).coerceAtLeast(0)
                 val updatedPlayers = state.players.toMutableList()
                 updatedPlayers[state.currentPlayerIndex] = currentPlayer.copy(
-                    score = selfLives.coerceAtLeast(0),
-                    extras = currentPlayer.extras + (LIVES_KEY to selfLives.coerceAtLeast(0)),
+                    score = selfLives,
+                    extras = currentPlayer.extras + (LIVES_KEY to selfLives),
                 )
                 val alive = updatedPlayers.filter { (it.extras[LIVES_KEY] as? Int ?: 0) > 0 }
                 val isWin = alive.size == 1
@@ -165,7 +174,7 @@ class KillerGameEngine : GameEngine {
                     isGameOver = isWin,
                     winnerId = if (isWin) alive.first().player.id else null,
                     message = if (selfLives <= 0) "${currentPlayer.player.name} eliminated themselves!"
-                    else "${currentPlayer.player.name} hit their own double! ($selfLives lives left)",
+                    else "${currentPlayer.player.name} hit their own number! ($selfLives ${if (selfLives == 1) "life" else "lives"} left)",
                     previousState = state,
                 )
             }

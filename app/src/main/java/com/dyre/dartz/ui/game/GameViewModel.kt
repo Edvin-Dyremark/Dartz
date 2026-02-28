@@ -31,6 +31,7 @@ class GameViewModel : ViewModel() {
     private lateinit var playerList: List<Player>
 
     val isCricket: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Cricket
+    val isKiller: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Killer
 
     val canUndo: Boolean get() = _gameState.value?.previousState != null
 
