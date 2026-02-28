@@ -33,7 +33,7 @@ import com.dyre.dartz.ui.game.components.Scoreboard
 fun GameScreen(
     modeArg: String,
     playersArg: String,
-    onGameOver: (winnerId: Int, winnerName: String) -> Unit,
+    onGameOver: (winnerId: Int, winnerName: String, finalScores: String) -> Unit,
     viewModel: GameViewModel = viewModel(),
 ) {
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
@@ -50,7 +50,10 @@ fun GameScreen(
         if (state.isGameOver && state.winnerId != null) {
             val winner = state.players.find { it.player.id == state.winnerId }
             if (winner != null) {
-                onGameOver(winner.player.id, winner.player.name)
+                val finalScores = state.players.joinToString(";") {
+                    "${it.player.name}:${it.score}"
+                }
+                onGameOver(winner.player.id, winner.player.name, finalScores)
             }
         }
     }

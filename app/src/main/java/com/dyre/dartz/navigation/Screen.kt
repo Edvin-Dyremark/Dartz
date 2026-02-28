@@ -5,7 +5,8 @@ sealed class Screen(val route: String) {
     data object Game : Screen("game/{mode}/{players}") {
         fun createRoute(mode: String, players: String) = "game/$mode/$players"
     }
-    data object GameOver : Screen("gameover/{winnerId}/{winnerName}") {
-        fun createRoute(winnerId: Int, winnerName: String) = "gameover/$winnerId/$winnerName"
+    data object GameOver : Screen("gameover/{winnerId}/{winnerName}/{finalScores}") {
+        fun createRoute(winnerId: Int, winnerName: String, finalScores: String) =
+            "gameover/$winnerId/$winnerName/$finalScores"
     }
 }
