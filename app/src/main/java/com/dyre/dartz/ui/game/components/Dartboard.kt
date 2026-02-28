@@ -44,6 +44,7 @@ fun Dartboard(
     isCricket: Boolean = false,
     deadNumbers: Set<Int> = emptySet(),
     activeNumbers: Set<Int> = emptySet(),
+    activeHighlightColor: Color = Color(0xCCD0BCFF),
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
@@ -114,7 +115,7 @@ fun Dartboard(
             val center = Offset(s / 2f, s / 2f)
             val boardRadius = s / 2f
 
-            drawDartboard(center, boardRadius, isCricket, deadNumbers, activeNumbers)
+            drawDartboard(center, boardRadius, isCricket, deadNumbers, activeNumbers, activeHighlightColor)
             drawNumberLabels(center, boardRadius)
 
             landingMarkers.forEach { markerPos ->
@@ -122,7 +123,7 @@ fun Dartboard(
             }
 
             magnifierPosition?.let { pos ->
-                drawMagnifier(pos, center, boardRadius, isCricket, deadNumbers, activeNumbers)
+                drawMagnifier(pos, center, boardRadius, isCricket, deadNumbers, activeNumbers, activeHighlightColor)
             }
         }
     }
@@ -145,7 +146,8 @@ private fun DrawScope.drawLandingDot(position: Offset) {
 
 private val DARKEN_OVERLAY = Color(0xAA000000)
 
-private val ACTIVE_HIGHLIGHT = Color(0xCC00E676)
+// Passed dynamically from composable; this is only a fallback
+private val ACTIVE_HIGHLIGHT_FALLBACK = Color(0xCCD0BCFF)
 
 private fun DrawScope.drawDartboard(
     center: Offset,
@@ -153,6 +155,7 @@ private fun DrawScope.drawDartboard(
     isCricket: Boolean,
     deadNumbers: Set<Int> = emptySet(),
     activeNumbers: Set<Int> = emptySet(),
+    activeHighlightColor: Color = ACTIVE_HIGHLIGHT_FALLBACK,
 ) {
     val rings = listOf(
         DartboardGeometry.DOUBLE_OUTER to DartboardGeometry.Ring.DOUBLE,
@@ -199,8 +202,8 @@ private fun DrawScope.drawDartboard(
                     outerRadius = outerFrac * boardRadius,
                     startAngleDeg = startAngle,
                     sweepAngleDeg = DartboardGeometry.SEGMENT_ANGLE,
-                    color = ACTIVE_HIGHLIGHT,
-                    strokeWidth = 5f,
+                    color = activeHighlightColor,
+                    strokeWidth = 12f,
                 )
             }
         }
@@ -229,10 +232,10 @@ private fun DrawScope.drawDartboard(
     }
     if (bullActive) {
         drawCircle(
-            color = ACTIVE_HIGHLIGHT,
+            color = activeHighlightColor,
             radius = DartboardGeometry.OUTER_BULL_OUTER * boardRadius,
             center = center,
-            style = Stroke(width = 5f),
+            style = Stroke(width = 12f),
         )
     }
 
@@ -369,6 +372,7 @@ private fun DrawScope.drawMagnifier(
     isCricket: Boolean,
     deadNumbers: Set<Int> = emptySet(),
     activeNumbers: Set<Int> = emptySet(),
+    activeHighlightColor: Color = ACTIVE_HIGHLIGHT_FALLBACK,
 ) {
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
@@ -420,7 +424,7 @@ private fun DrawScope.drawMagnifier(
         )
         canvas.nativeCanvas.scale(zoom, zoom)
 
-        drawDartboard(boardCenter, boardRadius, isCricket, deadNumbers, activeNumbers)
+        drawDartboard(boardCenter, boardRadius, isCricket, deadNumbers, activeNumbers, activeHighlightColor)
 
         canvas.nativeCanvas.restore()
     }

@@ -103,14 +103,9 @@ fun GameScreen(
                 )
             }
 
-            // 2. Current player name + score + darts
-            Spacer(modifier = Modifier.height(8.dp))
-            if (viewModel.isCricket) {
-                PlayerTurnBanner(
-                    playerName = currentPlayer.player.name,
-                    score = currentPlayer.score,
-                )
-            } else {
+            // 2. Current player name + score + darts (skip in cricket — scoreboard has it)
+            if (!viewModel.isCricket) {
+                Spacer(modifier = Modifier.height(8.dp))
                 PlayerTurnBanner(
                     playerName = currentPlayer.player.name,
                     score = currentPlayer.score,
@@ -131,6 +126,7 @@ fun GameScreen(
                 isCricket = viewModel.isCricket,
                 deadNumbers = deadNumbers,
                 activeNumbers = activeNumbers,
+                activeHighlightColor = MaterialTheme.colorScheme.primaryContainer,
             )
 
             // 4. Action buttons at bottom
