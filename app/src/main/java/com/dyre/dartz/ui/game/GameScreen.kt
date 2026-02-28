@@ -80,23 +80,25 @@ fun GameScreen(
     } else emptySet()
 
     // Compute killer-specific sets
-    val killerNumbers = if (viewModel.isKiller) {
-        state.players.mapNotNull { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int }
-            .filter { it > 0 }
-            .toSet()
-    } else emptySet()
-
-    val killerDeadNumbers = if (viewModel.isKiller) {
-        state.players.filter {
-            val claimed = it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
-            val lives = it.extras[KillerGameEngine.LIVES_KEY] as? Int ?: 0
-            claimed > 0 && lives <= 0
-        }.map { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as Int }.toSet()
-    } else emptySet()
-
     val allClaimed = viewModel.isKiller && state.players.all {
         (it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0) > 0
     }
+
+    val killerLitNumbers = if (viewModel.isKiller && allClaimed) {
+        val currentIsKiller = currentPlayer.extras[KillerGameEngine.IS_KILLER_KEY] as? Boolean ?: false
+        val currentClaimed = currentPlayer.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
+        if (currentIsKiller) {
+            // Killer sees all alive claimed numbers (to attack) — exclude dead players
+            state.players.filter {
+                val claimed = it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
+                val lives = it.extras[KillerGameEngine.LIVES_KEY] as? Int ?: 0
+                claimed > 0 && lives > 0
+            }.map { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as Int }.toSet()
+        } else {
+            // Not yet killer — only own number lit
+            if (currentClaimed > 0) setOf(currentClaimed) else emptySet()
+        }
+    } else emptySet()
 
     Scaffold { padding ->
         Column(
@@ -131,6 +133,7 @@ fun GameScreen(
                 playerName = currentPlayer.player.name,
                 score = currentPlayer.score,
                 dartsThisRound = state.dartsThisRound,
+                showScore = !viewModel.isKiller,
             )
 
             // 3. Dartboard — weight(1f) fills remaining space, touch works in all of it
@@ -146,8 +149,7 @@ fun GameScreen(
                 isCricket = viewModel.isCricket,
                 deadNumbers = deadNumbers,
                 isKiller = viewModel.isKiller,
-                killerNumbers = killerNumbers,
-                killerDeadNumbers = killerDeadNumbers,
+                killerLitNumbers = killerLitNumbers,
                 allKillersClaimed = allClaimed,
             )
 

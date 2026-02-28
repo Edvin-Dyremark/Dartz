@@ -33,7 +33,7 @@ class KillerGameEngine : GameEngine {
             dartsThisRound = emptyList(),
             isGameOver = false,
             winnerId = null,
-            message = "Each player: throw a dart to claim your number",
+            message = "Each player throws one dart to select their number",
         )
     }
 

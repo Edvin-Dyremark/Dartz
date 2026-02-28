@@ -21,6 +21,7 @@ fun PlayerTurnBanner(
     playerName: String,
     score: Int,
     dartsThisRound: List<DartScore> = emptyList(),
+    showScore: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -32,12 +33,14 @@ fun PlayerTurnBanner(
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text(
-            text = score.toString(),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        if (showScore) {
+            Text(
+                text = score.toString(),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -1,16 +1,13 @@
 package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -75,7 +72,7 @@ fun KillerScoreboard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "Marks",
+                    text = "Status",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -89,19 +86,6 @@ fun KillerScoreboard(
             ) {
                 Text(
                     text = "Lives",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .width(28.dp)
-                    .height(20.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "K",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -163,7 +147,7 @@ fun KillerScoreboard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = if (claimedNumber > 0) claimedNumber.toString() else "—",
+                        text = if (claimedNumber > 0) claimedNumber.toString() else "\u2014",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
@@ -171,7 +155,7 @@ fun KillerScoreboard(
                     )
                 }
 
-                // Marks toward killer (/, X, circled X)
+                // Status: /, X for marks, K for killer
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -179,7 +163,26 @@ fun KillerScoreboard(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (claimedNumber > 0) {
-                        KillerMarkIndicator(marks = marks)
+                        val statusText = when {
+                            isKiller -> "K"
+                            marks == 2 -> "X"
+                            marks == 1 -> "/"
+                            else -> ""
+                        }
+                        val statusColor = if (isKiller) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            textColor
+                        }
+                        if (statusText.isNotEmpty()) {
+                            Text(
+                                text = statusText,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
 
@@ -198,67 +201,6 @@ fun KillerScoreboard(
                         textAlign = TextAlign.Center,
                     )
                 }
-
-                // Killer status
-                Box(
-                    modifier = Modifier
-                        .width(28.dp)
-                        .height(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (isKiller) {
-                        Text(
-                            text = "K",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun KillerMarkIndicator(marks: Int) {
-    val color = if (marks >= 3) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    when {
-        marks == 0 -> {}
-        marks == 1 -> {
-            Text(
-                text = "/",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-        }
-        marks == 2 -> {
-            Text(
-                text = "X",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-        }
-        else -> {
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .border(width = 2.dp, color = color, shape = CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "X",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                )
             }
         }
     }
