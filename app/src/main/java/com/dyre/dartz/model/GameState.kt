@@ -9,4 +9,7 @@ data class GameState(
     val winnerId: Int?,
     val message: String?,
     val previousState: GameState? = null,
+    val isMiddling: Boolean = false,
+    val middlingResults: Map<Int, Float> = emptyMap(),
+    val middlingPlayerIndex: Int = 0,
 )

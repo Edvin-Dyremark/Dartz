@@ -2,6 +2,7 @@ package com.dyre.dartz.ui.game
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,16 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,7 +38,6 @@ fun GameScreen(
 ) {
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
     val landingMarkers by viewModel.landingMarkers.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val view = LocalView.current
 
     LaunchedEffect(Unit) {
@@ -58,94 +55,134 @@ fun GameScreen(
         }
     }
 
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            snackbarHostState.showSnackbar(it)
-        }
+    if (state.isMiddling) {
+        MiddlingScreen(
+            state = state,
+            landingMarkers = landingMarkers,
+            onDartThrown = { position, center, radius ->
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                viewModel.throwMiddlingDart(position, center, radius)
+            },
+        )
+        return
     }
 
     val currentPlayer = state.players[state.currentPlayerIndex]
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 1. All player scores at top
+        Scoreboard(
+            players = state.players,
+            currentPlayerIndex = state.currentPlayerIndex,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 2. Action buttons
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+                .fillMaxWidth()
                 .padding(horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
-            PlayerTurnBanner(
-                playerName = currentPlayer.player.name,
-                score = currentPlayer.score,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Dartboard(
-                onDartThrown = { score ->
-                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    viewModel.throwDart(score)
-                },
-                landingMarkers = landingMarkers,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // This turn's darts
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+            OutlinedButton(
+                onClick = { viewModel.undo() },
+                modifier = Modifier.weight(1f),
+                enabled = state.dartsThisRound.isNotEmpty(),
             ) {
-                for (i in 0 until 3) {
-                    val dart = state.dartsThisRound.getOrNull(i)
-                    Text(
-                        text = dart?.displayName ?: "—",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (dart != null) MaterialTheme.colorScheme.onBackground
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                Text("Undo")
             }
+            Button(
+                onClick = { viewModel.endTurn() },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Next Turn")
+            }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-            Scoreboard(
-                players = state.players,
-                currentPlayerIndex = state.currentPlayerIndex,
+        // 3. Current player turn info with darts
+        PlayerTurnBanner(
+            playerName = currentPlayer.player.name,
+            score = currentPlayer.score,
+            dartsThisRound = state.dartsThisRound,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 4. Dartboard — takes up remaining space
+        Dartboard(
+            onDartThrown = { score, position ->
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                viewModel.throwDart(score, position)
+            },
+            landingMarkers = landingMarkers,
+        )
+    }
+}
+
+@Composable
+private fun MiddlingScreen(
+    state: com.dyre.dartz.model.GameState,
+    landingMarkers: List<Offset>,
+    onDartThrown: (position: Offset, center: Offset, radius: Float) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Middling",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = state.message ?: "Throw at the bull to determine order",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (state.middlingPlayerIndex < state.players.size) {
+            val currentMiddler = state.players[state.middlingPlayerIndex]
+            Text(
+                text = "${currentMiddler.player.name}'s throw",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.secondary,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = { viewModel.undo() },
-                    modifier = Modifier.weight(1f),
-                    enabled = state.dartsThisRound.isNotEmpty(),
-                ) {
-                    Text("Undo")
-                }
-                OutlinedButton(
-                    onClick = { viewModel.throwMiss() },
-                    modifier = Modifier.weight(1f),
-                    enabled = state.currentDartIndex < 3,
-                ) {
-                    Text("Miss")
-                }
-                Button(
-                    onClick = { viewModel.endTurn() },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Next Turn")
-                }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val size = constraints.maxWidth.toFloat()
+                val center = Offset(size / 2f, size / 2f)
+                val boardRadius = size / 2f
+
+                Dartboard(
+                    onDartThrown = { _, position ->
+                        onDartThrown(position, center, boardRadius)
+                    },
+                    landingMarkers = landingMarkers,
+                )
             }
         }
     }

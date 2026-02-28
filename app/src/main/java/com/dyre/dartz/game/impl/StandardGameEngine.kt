@@ -80,8 +80,13 @@ class StandardGameEngine(private val mode: GameMode) : GameEngine {
 
     override fun endTurn(state: GameState): GameState {
         if (state.isGameOver) return state
+        val updatedPlayers = state.players.toMutableList()
+        updatedPlayers[state.currentPlayerIndex] = updatedPlayers[state.currentPlayerIndex].copy(
+            lastRoundDarts = state.dartsThisRound,
+        )
         val nextPlayerIndex = (state.currentPlayerIndex + 1) % state.players.size
         return state.copy(
+            players = updatedPlayers,
             currentPlayerIndex = nextPlayerIndex,
             currentDartIndex = 0,
             dartsThisRound = emptyList(),

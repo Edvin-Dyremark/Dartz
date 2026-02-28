@@ -1,7 +1,7 @@
 package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,7 +28,7 @@ import kotlin.math.sin
 
 @Composable
 fun Dartboard(
-    onDartThrown: (DartScore) -> Unit,
+    onDartThrown: (DartScore, Offset) -> Unit,
     landingMarkers: List<Offset> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
@@ -42,7 +42,7 @@ fun Dartboard(
     ) {
         val size = constraints.maxWidth.toFloat()
         val center = Offset(size / 2f, size / 2f)
-        val boardRadius = size / 2f * 0.95f // leave margin for numbers
+        val boardRadius = size / 2f
 
         Canvas(
             modifier = Modifier
@@ -52,12 +52,12 @@ fun Dartboard(
                     detectTapGestures { tapOffset ->
                         if (!isDragging) {
                             val score = PolarCoordinates.resolve(tapOffset, center, boardRadius)
-                            onDartThrown(score)
+                            onDartThrown(score, tapOffset)
                         }
                     }
                 }
                 .pointerInput(Unit) {
-                    detectDragGesturesAfterLongPress(
+                    detectDragGestures(
                         onDragStart = { offset ->
                             isDragging = true
                             magnifierPosition = offset
@@ -68,7 +68,7 @@ fun Dartboard(
                         onDragEnd = {
                             magnifierPosition?.let { pos ->
                                 val score = PolarCoordinates.resolve(pos, center, boardRadius)
-                                onDartThrown(score)
+                                onDartThrown(score, pos)
                             }
                             magnifierPosition = null
                             isDragging = false
@@ -222,10 +222,11 @@ private fun DrawScope.drawAnnularSector(
 }
 
 private fun DrawScope.drawNumberLabels(center: Offset, boardRadius: Float) {
-    val labelRadius = boardRadius * 0.98f
+    // Place numbers inside the double ring (centered between outer single and double outer)
+    val labelRadius = boardRadius * ((DartboardGeometry.OUTER_SINGLE_OUTER + DartboardGeometry.DOUBLE_OUTER) / 2f)
     val textPaint = android.graphics.Paint().apply {
         this.color = android.graphics.Color.WHITE
-        textSize = boardRadius * 0.07f
+        textSize = boardRadius * 0.055f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
@@ -252,9 +253,9 @@ private fun DrawScope.drawMagnifier(
     boardCenter: Offset,
     boardRadius: Float,
 ) {
-    val magnifierRadius = boardRadius * 0.3f
+    val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
-    val zoom = 2.5f
+    val zoom = 2.0f
 
     drawContext.canvas.nativeCanvas.save()
     val clipPath = android.graphics.Path()
@@ -271,7 +272,7 @@ private fun DrawScope.drawMagnifier(
     // Redraw the board inside the magnifier
     drawDartboard(boardCenter, boardRadius)
 
-    // Draw crosshair at touch position
+    // Restore from clip
     drawContext.canvas.nativeCanvas.restore()
 
     // Magnifier border
@@ -286,4 +287,37 @@ private fun DrawScope.drawMagnifier(
     val crossSize = 10f
     drawLine(Color.White, Offset(magnifierCenter.x - crossSize, magnifierCenter.y), Offset(magnifierCenter.x + crossSize, magnifierCenter.y), strokeWidth = 2f)
     drawLine(Color.White, Offset(magnifierCenter.x, magnifierCenter.y - crossSize), Offset(magnifierCenter.x, magnifierCenter.y + crossSize), strokeWidth = 2f)
+
+    // Score label below magnifier
+    val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
+    val labelText = score.displayName
+    val labelPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = boardRadius * 0.06f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+        isFakeBoldText = true
+    }
+    val labelY = magnifierCenter.y + magnifierRadius + labelPaint.textSize + 8f
+    val textWidth = labelPaint.measureText(labelText)
+    val pillPadH = 16f
+    val pillPadV = 6f
+    val bgPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.argb(180, 0, 0, 0)
+        isAntiAlias = true
+    }
+    drawContext.canvas.nativeCanvas.drawRoundRect(
+        magnifierCenter.x - textWidth / 2f - pillPadH,
+        labelY - labelPaint.textSize - pillPadV,
+        magnifierCenter.x + textWidth / 2f + pillPadH,
+        labelY + pillPadV,
+        16f, 16f,
+        bgPaint,
+    )
+    drawContext.canvas.nativeCanvas.drawText(
+        labelText,
+        magnifierCenter.x,
+        labelY,
+        labelPaint,
+    )
 }

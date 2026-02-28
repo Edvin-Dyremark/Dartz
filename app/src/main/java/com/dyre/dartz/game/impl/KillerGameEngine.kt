@@ -199,7 +199,12 @@ class KillerGameEngine : GameEngine {
             attempts++
         }
 
+        val updatedPlayers = state.players.toMutableList()
+        updatedPlayers[state.currentPlayerIndex] = updatedPlayers[state.currentPlayerIndex].copy(
+            lastRoundDarts = state.dartsThisRound,
+        )
         return state.copy(
+            players = updatedPlayers,
             currentPlayerIndex = nextIndex,
             currentDartIndex = 0,
             dartsThisRound = emptyList(),
