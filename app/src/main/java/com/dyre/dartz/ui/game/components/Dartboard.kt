@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,12 +45,13 @@ fun Dartboard(
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var boardSize by remember { mutableStateOf(IntSize.Zero) }
+    var boxSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // Outer Box extends touch area above and below the board
+    // Box fills all available space — touch works everywhere including above/below board
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 60.dp, bottom = 80.dp)
+            .fillMaxSize()
+            .onSizeChanged { boxSize = it }
             .pointerInput(Unit) {
                 coroutineScope {
                     awaitPointerEventScope {
@@ -60,25 +60,26 @@ fun Dartboard(
                             if (down.type != PointerEventType.Press) continue
                             val downPos = down.changes.first().position
 
-                            // Clamp to board bounds for score resolution
+                            // Canvas is centered in Box — compute its Y offset
                             val boardS = min(boardSize.width, boardSize.height).toFloat()
-                            val clamp = { pos: Offset ->
+                            val canvasTopY = (boxSize.height - boardS) / 2f
+                            val toCanvas = { pos: Offset ->
                                 Offset(
                                     pos.x.coerceIn(0f, boardS),
-                                    pos.y.coerceIn(0f, boardS),
+                                    (pos.y - canvasTopY).coerceIn(0f, boardS),
                                 )
                             }
 
-                            magnifierPosition = clamp(downPos)
+                            magnifierPosition = toCanvas(downPos)
                             down.changes.forEach { it.consume() }
 
-                            var lastPos = clamp(downPos)
+                            var lastPos = toCanvas(downPos)
 
                             while (true) {
                                 val event = awaitPointerEvent()
                                 when (event.type) {
                                     PointerEventType.Move -> {
-                                        lastPos = clamp(event.changes.first().position)
+                                        lastPos = toCanvas(event.changes.first().position)
                                         magnifierPosition = lastPos
                                         event.changes.forEach { it.consume() }
                                     }

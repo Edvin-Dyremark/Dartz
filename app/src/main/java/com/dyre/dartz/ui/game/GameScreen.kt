@@ -86,13 +86,15 @@ fun GameScreen(
                 dartsThisRound = state.dartsThisRound,
             )
 
-            // 3. Dartboard
+            // 3. Dartboard — weight(1f) fills remaining space, touch works in all of it
             Dartboard(
                 onDartThrown = { score, position ->
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     viewModel.throwDart(score, position)
                 },
-                modifier = Modifier.padding(horizontal = 2.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 2.dp),
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
             )
