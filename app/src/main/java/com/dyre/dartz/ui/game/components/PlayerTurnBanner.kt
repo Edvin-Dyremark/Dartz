@@ -41,7 +41,6 @@ fun PlayerTurnBanner(
         Spacer(modifier = Modifier.height(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             for (i in 0 until 3) {
                 val dart = dartsThisRound.getOrNull(i)
@@ -51,6 +50,7 @@ fun PlayerTurnBanner(
                     color = if (dart != null) MaterialTheme.colorScheme.onBackground
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
