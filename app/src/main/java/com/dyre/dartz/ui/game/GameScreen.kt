@@ -84,21 +84,40 @@ fun GameScreen(
         (it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0) > 0
     }
 
-    val killerLitNumbers = if (viewModel.isKiller && allClaimed) {
-        val currentIsKiller = currentPlayer.extras[KillerGameEngine.IS_KILLER_KEY] as? Boolean ?: false
-        val currentClaimed = currentPlayer.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
-        if (currentIsKiller) {
-            // Killer sees all alive claimed numbers (to attack) — exclude dead players
-            state.players.filter {
-                val claimed = it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
-                val lives = it.extras[KillerGameEngine.LIVES_KEY] as? Int ?: 0
-                claimed > 0 && lives > 0
-            }.map { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as Int }.toSet()
-        } else {
-            // Not yet killer — only own number lit
-            if (currentClaimed > 0) setOf(currentClaimed) else emptySet()
-        }
+    val currentPhase = currentPlayer.extras[KillerGameEngine.PHASE_KEY] as? String
+    val isClaimingPhase = viewModel.isKiller && currentPhase == "claiming"
+
+    // Numbers already claimed by other players (for dimming during setup)
+    val claimedNumbers = if (viewModel.isKiller) {
+        state.players.mapNotNull { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int }
+            .filter { it > 0 }
+            .toSet()
     } else emptySet()
+
+    val killerLitNumbers = when {
+        // During claiming: all 1-20 are lit except already-claimed ones
+        isClaimingPhase -> (1..20).toSet() - claimedNumbers
+        // All claimed, playing phase
+        viewModel.isKiller && allClaimed -> {
+            val currentIsKiller = currentPlayer.extras[KillerGameEngine.IS_KILLER_KEY] as? Boolean ?: false
+            val currentClaimed = currentPlayer.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
+            if (currentIsKiller) {
+                // Killer sees all alive claimed numbers (to attack)
+                state.players.filter {
+                    val claimed = it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0
+                    val lives = it.extras[KillerGameEngine.LIVES_KEY] as? Int ?: 0
+                    claimed > 0 && lives > 0
+                }.map { it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as Int }.toSet()
+            } else {
+                // Not yet killer — only own number lit
+                if (currentClaimed > 0) setOf(currentClaimed) else emptySet()
+            }
+        }
+        else -> emptySet()
+    }
+
+    // Enable dimming during claiming phase too (not just after all claimed)
+    val killerDimmingActive = isClaimingPhase || allClaimed
 
     Scaffold { padding ->
         Column(
@@ -129,11 +148,15 @@ fun GameScreen(
 
             // 2. Current player name + score + darts
             Spacer(modifier = Modifier.height(8.dp))
+            val killerClaiming = viewModel.isKiller &&
+                    (currentPlayer.extras[KillerGameEngine.PHASE_KEY] as? String) == "claiming"
             PlayerTurnBanner(
                 playerName = currentPlayer.player.name,
                 score = currentPlayer.score,
                 dartsThisRound = state.dartsThisRound,
                 showScore = !viewModel.isKiller,
+                showDarts = !killerClaiming,
+                useDartNames = viewModel.isCricket || viewModel.isKiller,
             )
 
             // 3. Dartboard — weight(1f) fills remaining space, touch works in all of it
@@ -150,7 +173,7 @@ fun GameScreen(
                 deadNumbers = deadNumbers,
                 isKiller = viewModel.isKiller,
                 killerLitNumbers = killerLitNumbers,
-                allKillersClaimed = allClaimed,
+                killerDimmingActive = killerDimmingActive,
             )
 
             // 4. Action buttons at bottom

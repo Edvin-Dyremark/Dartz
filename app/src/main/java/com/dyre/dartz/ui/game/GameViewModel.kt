@@ -56,6 +56,12 @@ class GameViewModel : ViewModel() {
             Player(id = index, name = name.trim())
         }
 
+        // Skip middling for cricket and killer — go straight to game
+        if (gameMode is GameMode.Cricket || gameMode is GameMode.Killer) {
+            startGame(playerList)
+            return
+        }
+
         val middlingState = GameState(
             players = playerList.map { com.dyre.dartz.model.PlayerState(it, 0) },
             currentPlayerIndex = 0,

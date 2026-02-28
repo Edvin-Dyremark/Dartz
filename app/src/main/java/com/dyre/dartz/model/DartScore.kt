@@ -17,6 +17,16 @@ data class DartScore(
 
     val isDouble: Boolean get() = multiplier == 2
 
+    val shortName: String
+        get() = when {
+            segment == 0 -> "Miss"
+            segment == 25 && multiplier == 2 -> "D-Bull"
+            segment == 25 && multiplier == 1 -> "Bull"
+            multiplier == 3 -> "T$segment"
+            multiplier == 2 -> "D$segment"
+            else -> "$segment"
+        }
+
     companion object {
         val MISS = DartScore(0, 0, 0)
     }
