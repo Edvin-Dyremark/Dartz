@@ -51,7 +51,7 @@ fun Dartboard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 40.dp, bottom = 64.dp)
+            .padding(top = 80.dp, bottom = 120.dp)
             .pointerInput(Unit) {
                 coroutineScope {
                     awaitPointerEventScope {

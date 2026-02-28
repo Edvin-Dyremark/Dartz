@@ -87,7 +87,6 @@ fun GameScreen(
             )
 
             // 3. Dartboard
-            Spacer(modifier = Modifier.height(12.dp))
             Dartboard(
                 onDartThrown = { score, position ->
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
