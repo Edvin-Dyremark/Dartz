@@ -27,6 +27,7 @@ fun GameOverScreen(
     winnerName: String,
     finalScores: String,
     onPlayAgain: () -> Unit,
+    isKiller: Boolean = false,
 ) {
     // Parse "Name1:score1;Name2:score2" into list of pairs, sorted by score descending
     val scores = finalScores.split(";")
@@ -81,14 +82,14 @@ fun GameOverScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Final Scores",
+                    text = if (isKiller) "Final Standings" else "Final Scores",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                 )
-                scores.forEach { (name, score) ->
+                scores.forEachIndexed { index, (name, score) ->
                     val isWinner = name == winnerName
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -103,7 +104,7 @@ fun GameOverScreen(
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = score.toString(),
+                            text = if (isKiller) ordinal(index + 1) else score.toString(),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = if (isWinner) FontWeight.Bold else FontWeight.Normal,
                             color = if (isWinner) MaterialTheme.colorScheme.primary
@@ -123,4 +124,12 @@ fun GameOverScreen(
             }
         }
     }
+}
+
+private fun ordinal(n: Int): String = when {
+    n % 100 in 11..13 -> "${n}th"
+    n % 10 == 1 -> "${n}st"
+    n % 10 == 2 -> "${n}nd"
+    n % 10 == 3 -> "${n}rd"
+    else -> "${n}th"
 }

@@ -52,8 +52,21 @@ fun GameScreen(
         if (state.isGameOver && state.winnerId != null) {
             val winner = state.players.find { it.player.id == state.winnerId }
             if (winner != null) {
-                val finalScores = state.players.joinToString(";") {
-                    "${it.player.name}:${it.score}"
+                val finalScores = if (viewModel.isKiller) {
+                    // Sort: winner first, then by elimination order descending (last eliminated = 2nd place)
+                    // Encode placement as score so game over screen sorts correctly
+                    // Winner gets highest score, first eliminated gets lowest
+                    val totalPlayers = state.players.size
+                    state.players.map { player ->
+                        val elimOrder = player.extras[KillerGameEngine.ELIMINATION_ORDER_KEY] as? Int ?: 0
+                        val placement = if (player.player.id == state.winnerId) totalPlayers
+                            else totalPlayers - elimOrder
+                        player.player.name to placement
+                    }.joinToString(";") { "${it.first}:${it.second}" }
+                } else {
+                    state.players.joinToString(";") {
+                        "${it.player.name}:${it.score}"
+                    }
                 }
                 onGameOver(winner.player.id, winner.player.name, finalScores)
             }
@@ -148,14 +161,13 @@ fun GameScreen(
 
             // 2. Current player name + score + darts
             Spacer(modifier = Modifier.height(8.dp))
-            val killerClaiming = viewModel.isKiller &&
-                    (currentPlayer.extras[KillerGameEngine.PHASE_KEY] as? String) == "claiming"
+            val killerSetup = viewModel.isKiller && !allClaimed
             PlayerTurnBanner(
                 playerName = currentPlayer.player.name,
                 score = currentPlayer.score,
                 dartsThisRound = state.dartsThisRound,
                 showScore = !viewModel.isKiller,
-                showDarts = !killerClaiming,
+                showDarts = !killerSetup,
                 useDartNames = viewModel.isCricket || viewModel.isKiller,
             )
 

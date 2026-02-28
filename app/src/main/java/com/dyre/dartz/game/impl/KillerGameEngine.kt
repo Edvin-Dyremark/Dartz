@@ -14,6 +14,7 @@ class KillerGameEngine : GameEngine {
         const val PHASE_KEY = "phase" // "claiming" or "killing"
         const val IS_KILLER_KEY = "isKiller"
         const val MARKS_KEY = "marks"
+        const val ELIMINATION_ORDER_KEY = "eliminationOrder"
         const val MAX_LIVES = 3
         const val MARKS_TO_KILLER = 3
     }
@@ -135,9 +136,14 @@ class KillerGameEngine : GameEngine {
                 val targetLives = ((target.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - dart.multiplier).coerceAtLeast(0)
                 val updatedPlayers = state.players.toMutableList()
 
+                val targetExtras = target.extras + (LIVES_KEY to targetLives) +
+                        if (targetLives <= 0) {
+                            val alreadyEliminated = state.players.count { it.extras[ELIMINATION_ORDER_KEY] as? Int ?: 0 > 0 }
+                            mapOf(ELIMINATION_ORDER_KEY to alreadyEliminated + 1)
+                        } else emptyMap()
                 updatedPlayers[targetIdx] = target.copy(
                     score = targetLives,
-                    extras = target.extras + (LIVES_KEY to targetLives),
+                    extras = targetExtras,
                 )
 
                 // Check win: only one player with lives > 0
@@ -160,9 +166,14 @@ class KillerGameEngine : GameEngine {
             if (dart.segment == claimedNumber) {
                 val selfLives = ((currentPlayer.extras[LIVES_KEY] as? Int ?: MAX_LIVES) - dart.multiplier).coerceAtLeast(0)
                 val updatedPlayers = state.players.toMutableList()
+                val selfExtras = currentPlayer.extras + (LIVES_KEY to selfLives) +
+                        if (selfLives <= 0) {
+                            val alreadyEliminated = state.players.count { it.extras[ELIMINATION_ORDER_KEY] as? Int ?: 0 > 0 }
+                            mapOf(ELIMINATION_ORDER_KEY to alreadyEliminated + 1)
+                        } else emptyMap()
                 updatedPlayers[state.currentPlayerIndex] = currentPlayer.copy(
                     score = selfLives,
-                    extras = currentPlayer.extras + (LIVES_KEY to selfLives),
+                    extras = selfExtras,
                 )
                 val alive = updatedPlayers.filter { (it.extras[LIVES_KEY] as? Int ?: 0) > 0 }
                 val isWin = alive.size == 1

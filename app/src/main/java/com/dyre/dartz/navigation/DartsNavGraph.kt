@@ -35,7 +35,7 @@ fun DartsNavGraph() {
                 modeArg = mode,
                 playersArg = players,
                 onGameOver = { winnerId, winnerName, finalScores ->
-                    navController.navigate(Screen.GameOver.createRoute(winnerId, winnerName, finalScores)) {
+                    navController.navigate(Screen.GameOver.createRoute(winnerId, winnerName, finalScores, mode)) {
                         popUpTo(Screen.Setup.route) { inclusive = false }
                     }
                 }
@@ -47,13 +47,16 @@ fun DartsNavGraph() {
                 navArgument("winnerId") { type = NavType.IntType },
                 navArgument("winnerName") { type = NavType.StringType },
                 navArgument("finalScores") { type = NavType.StringType },
+                navArgument("mode") { type = NavType.StringType },
             )
         ) { backStackEntry ->
             val winnerName = backStackEntry.arguments?.getString("winnerName") ?: ""
             val finalScores = backStackEntry.arguments?.getString("finalScores") ?: ""
+            val gameMode = backStackEntry.arguments?.getString("mode") ?: ""
             GameOverScreen(
                 winnerName = winnerName,
                 finalScores = finalScores,
+                isKiller = gameMode == "Killer",
                 onPlayAgain = {
                     navController.navigate(Screen.Setup.route) {
                         popUpTo(Screen.Setup.route) { inclusive = true }
