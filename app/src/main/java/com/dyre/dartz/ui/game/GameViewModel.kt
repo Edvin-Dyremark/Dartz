@@ -91,16 +91,13 @@ class GameViewModel : ViewModel() {
                 val dist = updatedResults[p.player.id] ?: 0f
                 val pct = "%.1f".format(dist * 100)
                 "${p.player.name}: ${pct}% from bull"
-            } + "\n${sortedPlayers.first().player.name} goes first!"
+            } + "\n\n${sortedPlayers.first().player.name} goes first!"
 
             _gameState.value = current.copy(
                 middlingResults = updatedResults,
                 middlingPlayerIndex = nextIdx,
                 message = resultMessage,
             )
-
-            val orderedPlayers = sortedPlayers.map { it.player }
-            startGame(orderedPlayers)
         } else {
             _gameState.value = current.copy(
                 middlingResults = updatedResults,
@@ -108,6 +105,13 @@ class GameViewModel : ViewModel() {
                 message = "${current.players[nextIdx].player.name}: throw at the bull!",
             )
         }
+    }
+
+    fun confirmMiddling() {
+        val current = _gameState.value ?: return
+        if (!current.isMiddling) return
+        val sortedPlayers = current.players.sortedBy { current.middlingResults[it.player.id] ?: Float.MAX_VALUE }
+        startGame(sortedPlayers.map { it.player })
     }
 
     private fun startGame(orderedPlayers: List<Player>) {

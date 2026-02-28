@@ -64,6 +64,7 @@ fun GameScreen(
                 view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                 viewModel.throwMiddlingDart(position, center, radius)
             },
+            onStartGame = { viewModel.confirmMiddling() },
         )
         return
     }
@@ -134,7 +135,10 @@ private fun MiddlingScreen(
     state: com.dyre.dartz.model.GameState,
     landingMarkers: List<Offset>,
     onDartThrown: (position: Offset, center: Offset, radius: Float) -> Unit,
+    onStartGame: () -> Unit,
 ) {
+    val allThrown = state.middlingPlayerIndex >= state.players.size
+
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -163,7 +167,12 @@ private fun MiddlingScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (state.middlingPlayerIndex < state.players.size) {
+            if (allThrown) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onStartGame) {
+                    Text("Start Game")
+                }
+            } else {
                 val currentMiddler = state.players[state.middlingPlayerIndex]
                 Text(
                     text = "${currentMiddler.player.name}'s throw",
