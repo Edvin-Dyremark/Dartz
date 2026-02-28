@@ -299,8 +299,8 @@ private fun DrawScope.drawMagnifier(
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
     val zoom = 2.0f
-    val borderWidth = 6f
-    val outlineWidth = 4f
+    val borderWidth = 8f
+    val outlineWidth = 6f
 
     val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
     val labelText = score.displayName

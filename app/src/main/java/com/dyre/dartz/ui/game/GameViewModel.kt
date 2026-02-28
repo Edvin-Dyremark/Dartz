@@ -11,7 +11,6 @@ import com.dyre.dartz.model.DartScore
 import com.dyre.dartz.model.GameConfig
 import com.dyre.dartz.model.GameState
 import com.dyre.dartz.model.Player
-import com.dyre.dartz.util.PolarCoordinates
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,47 +70,13 @@ class GameViewModel : ViewModel() {
         _gameState.value = middlingState
     }
 
-    fun throwMiddlingDart(boardPosition: Offset, boardCenter: Offset, boardRadius: Float) {
+    fun selectFirstPlayer(playerId: Int) {
         val current = _gameState.value ?: return
         if (!current.isMiddling) return
 
-        val polar = PolarCoordinates.toPolar(boardPosition, boardCenter)
-        val distanceFromBull = polar.radius / boardRadius
-
-        val playerIdx = current.middlingPlayerIndex
-        val player = current.players[playerIdx]
-        val updatedResults = current.middlingResults + (player.player.id to distanceFromBull)
-
-        _landingMarkers.value = _landingMarkers.value + boardPosition
-
-        val nextIdx = playerIdx + 1
-        if (nextIdx >= current.players.size) {
-            val sortedPlayers = current.players.sortedBy { updatedResults[it.player.id] ?: Float.MAX_VALUE }
-            val resultMessage = sortedPlayers.joinToString("\n") { p ->
-                val dist = updatedResults[p.player.id] ?: 0f
-                val pct = "%.1f".format(dist * 100)
-                "${p.player.name}: ${pct}% from bull"
-            } + "\n\n${sortedPlayers.first().player.name} goes first!"
-
-            _gameState.value = current.copy(
-                middlingResults = updatedResults,
-                middlingPlayerIndex = nextIdx,
-                message = resultMessage,
-            )
-        } else {
-            _gameState.value = current.copy(
-                middlingResults = updatedResults,
-                middlingPlayerIndex = nextIdx,
-                message = "${current.players[nextIdx].player.name}: throw at the bull!",
-            )
-        }
-    }
-
-    fun confirmMiddling() {
-        val current = _gameState.value ?: return
-        if (!current.isMiddling) return
-        val sortedPlayers = current.players.sortedBy { current.middlingResults[it.player.id] ?: Float.MAX_VALUE }
-        startGame(sortedPlayers.map { it.player })
+        val winner = playerList.first { it.id == playerId }
+        val others = playerList.filter { it.id != playerId }
+        startGame(listOf(winner) + others)
     }
 
     private fun startGame(orderedPlayers: List<Player>) {
@@ -131,10 +96,6 @@ class GameViewModel : ViewModel() {
         _gameState.value = newState
         boardPosition?.let {
             _landingMarkers.value = _landingMarkers.value + it
-        }
-        // Auto-advance after 3 darts
-        if (!newState.isGameOver && newState.currentDartIndex >= 3) {
-            endTurn()
         }
     }
 

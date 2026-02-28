@@ -2,7 +2,6 @@ package com.dyre.dartz.ui.game
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,24 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,18 +55,14 @@ fun GameScreen(
 
     if (state.isMiddling) {
         MiddlingScreen(
-            state = state,
-            landingMarkers = landingMarkers,
-            onDartThrown = { position, center, radius ->
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                viewModel.throwMiddlingDart(position, center, radius)
-            },
-            onStartGame = { viewModel.confirmMiddling() },
+            players = state.players,
+            onPlayerSelected = { playerId -> viewModel.selectFirstPlayer(playerId) },
         )
         return
     }
 
     val currentPlayer = state.players[state.currentPlayerIndex]
+    val threwThreeDarts = state.currentDartIndex >= 3
 
     Scaffold { padding ->
         Column(
@@ -90,7 +78,7 @@ fun GameScreen(
                 currentPlayerIndex = state.currentPlayerIndex,
             )
 
-            // 2. Current player turn info
+            // 2. Current player name + score + darts
             Spacer(modifier = Modifier.height(8.dp))
             PlayerTurnBanner(
                 playerName = currentPlayer.player.name,
@@ -98,7 +86,7 @@ fun GameScreen(
                 dartsThisRound = state.dartsThisRound,
             )
 
-            // 3. Dartboard with padding (touch extends into padding)
+            // 3. Dartboard
             Spacer(modifier = Modifier.height(12.dp))
             Dartboard(
                 onDartThrown = { score, position ->
@@ -127,6 +115,7 @@ fun GameScreen(
                 Button(
                     onClick = { viewModel.endTurn() },
                     modifier = Modifier.weight(1f),
+                    enabled = threwThreeDarts,
                 ) {
                     Text("Next Turn")
                 }
@@ -137,42 +126,9 @@ fun GameScreen(
 
 @Composable
 private fun MiddlingScreen(
-    state: com.dyre.dartz.model.GameState,
-    landingMarkers: List<Offset>,
-    onDartThrown: (position: Offset, center: Offset, radius: Float) -> Unit,
-    onStartGame: () -> Unit,
+    players: List<com.dyre.dartz.model.PlayerState>,
+    onPlayerSelected: (playerId: Int) -> Unit,
 ) {
-    val allThrown = state.middlingPlayerIndex >= state.players.size
-    var showResultDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(allThrown) {
-        if (allThrown) showResultDialog = true
-    }
-
-    if (showResultDialog && allThrown) {
-        AlertDialog(
-            onDismissRequest = {
-                showResultDialog = false
-                onStartGame()
-            },
-            title = { Text("Middling Results") },
-            text = {
-                Text(
-                    text = state.message ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showResultDialog = false
-                    onStartGame()
-                }) {
-                    Text("Start Game")
-                }
-            },
-        )
-    }
-
     Scaffold { padding ->
         Column(
             modifier = Modifier
@@ -180,48 +136,24 @@ private fun MiddlingScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Middling",
+                text = "Who won middling?",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = if (allThrown) "" else (state.message ?: "Throw at the bull to determine order"),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (!allThrown) {
-                val currentMiddler = state.players[state.middlingPlayerIndex]
-                Text(
-                    text = "${currentMiddler.player.name}'s throw",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val size = constraints.maxWidth.toFloat()
-                    val center = Offset(size / 2f, size / 2f)
-                    val boardRadius = size / 2f
-
-                    Dartboard(
-                        onDartThrown = { _, position ->
-                            onDartThrown(position, center, boardRadius)
-                        },
-                        landingMarkers = landingMarkers,
-                    )
+            players.forEach { playerState ->
+                Button(
+                    onClick = { onPlayerSelected(playerState.player.id) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp, vertical = 4.dp),
+                ) {
+                    Text(playerState.player.name)
                 }
             }
         }
