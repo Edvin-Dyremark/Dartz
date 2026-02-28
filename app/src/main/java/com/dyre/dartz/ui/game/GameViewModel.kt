@@ -25,10 +25,15 @@ class GameViewModel : ViewModel() {
     private val _landingMarkers = MutableStateFlow<List<Offset>>(emptyList())
     val landingMarkers: StateFlow<List<Offset>> = _landingMarkers.asStateFlow()
 
+    // Stack of marker snapshots for undo across turns
+    private val markerHistory = mutableListOf<List<Offset>>()
+
     private lateinit var gameMode: GameMode
     private lateinit var playerList: List<Player>
 
     val isCricket: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Cricket
+
+    val canUndo: Boolean get() = _gameState.value?.previousState != null
 
     fun initialize(modeArg: String, playersArg: String) {
         if (_gameState.value != null) return
@@ -51,7 +56,6 @@ class GameViewModel : ViewModel() {
             Player(id = index, name = name.trim())
         }
 
-        // Start middling phase
         val middlingState = GameState(
             players = playerList.map { com.dyre.dartz.model.PlayerState(it, 0) },
             currentPlayerIndex = 0,
@@ -82,7 +86,6 @@ class GameViewModel : ViewModel() {
 
         val nextIdx = playerIdx + 1
         if (nextIdx >= current.players.size) {
-            // All players have thrown - determine order
             val sortedPlayers = current.players.sortedBy { updatedResults[it.player.id] ?: Float.MAX_VALUE }
             val resultMessage = sortedPlayers.joinToString("\n") { p ->
                 val dist = updatedResults[p.player.id] ?: 0f
@@ -96,7 +99,6 @@ class GameViewModel : ViewModel() {
                 message = resultMessage,
             )
 
-            // After a brief display, start the real game with reordered players
             val orderedPlayers = sortedPlayers.map { it.player }
             startGame(orderedPlayers)
         } else {
@@ -110,12 +112,17 @@ class GameViewModel : ViewModel() {
 
     private fun startGame(orderedPlayers: List<Player>) {
         _landingMarkers.value = emptyList()
+        markerHistory.clear()
         _gameState.value = engine.createInitialState(GameConfig(gameMode, orderedPlayers))
     }
 
     fun throwDart(score: DartScore, boardPosition: Offset? = null) {
         val current = _gameState.value ?: return
         if (current.isGameOver || current.currentDartIndex >= 3) return
+
+        // Save marker state before this dart for undo
+        markerHistory.add(_landingMarkers.value)
+
         val newState = engine.processDart(current, score)
         _gameState.value = newState
         boardPosition?.let {
@@ -133,14 +140,18 @@ class GameViewModel : ViewModel() {
 
     fun undo() {
         val current = _gameState.value ?: return
-        _gameState.value = engine.undoLastDart(current)
-        if (_landingMarkers.value.isNotEmpty()) {
-            _landingMarkers.value = _landingMarkers.value.dropLast(1)
+        val prev = current.previousState ?: return
+        _gameState.value = prev
+        // Restore markers from history
+        if (markerHistory.isNotEmpty()) {
+            _landingMarkers.value = markerHistory.removeAt(markerHistory.lastIndex)
         }
     }
 
     fun endTurn() {
         val current = _gameState.value ?: return
+        // Save marker state before end turn for undo
+        markerHistory.add(_landingMarkers.value)
         _gameState.value = engine.endTurn(current)
         _landingMarkers.value = emptyList()
     }

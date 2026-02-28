@@ -91,7 +91,7 @@ class StandardGameEngine(private val mode: GameMode) : GameEngine {
             currentDartIndex = 0,
             dartsThisRound = emptyList(),
             message = null,
-            previousState = null,
+            previousState = state,
         )
     }
 

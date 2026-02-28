@@ -116,7 +116,7 @@ class CricketGameEngine : GameEngine {
             currentDartIndex = 0,
             dartsThisRound = emptyList(),
             message = null,
-            previousState = null,
+            previousState = state,
         )
     }
 }

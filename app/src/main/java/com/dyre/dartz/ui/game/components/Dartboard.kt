@@ -1,13 +1,17 @@
 package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
@@ -20,6 +24,9 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import com.dyre.dartz.model.DartScore
 import com.dyre.dartz.util.DartboardGeometry
 import com.dyre.dartz.util.PolarCoordinates
@@ -38,11 +45,13 @@ fun Dartboard(
     isCricket: Boolean = false,
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
+    var boardSize by remember { mutableStateOf(IntSize.Zero) }
 
-    Canvas(
+    // Outer Box extends touch area below the board
+    Box(
         modifier = modifier
-            .fillMaxSize()
-            .aspectRatio(1f)
+            .fillMaxWidth()
+            .padding(bottom = 40.dp)
             .pointerInput(Unit) {
                 coroutineScope {
                     awaitPointerEventScope {
@@ -51,16 +60,25 @@ fun Dartboard(
                             if (down.type != PointerEventType.Press) continue
                             val downPos = down.changes.first().position
 
-                            magnifierPosition = downPos
+                            // Clamp to board bounds for score resolution
+                            val boardS = min(boardSize.width, boardSize.height).toFloat()
+                            val clamp = { pos: Offset ->
+                                Offset(
+                                    pos.x.coerceIn(0f, boardS),
+                                    pos.y.coerceIn(0f, boardS),
+                                )
+                            }
+
+                            magnifierPosition = clamp(downPos)
                             down.changes.forEach { it.consume() }
 
-                            var lastPos = downPos
+                            var lastPos = clamp(downPos)
 
                             while (true) {
                                 val event = awaitPointerEvent()
                                 when (event.type) {
                                     PointerEventType.Move -> {
-                                        lastPos = event.changes.first().position
+                                        lastPos = clamp(event.changes.first().position)
                                         magnifierPosition = lastPos
                                         event.changes.forEach { it.consume() }
                                     }
@@ -73,29 +91,36 @@ fun Dartboard(
                             }
 
                             magnifierPosition = null
-                            val s = min(size.width, size.height).toFloat()
-                            val center = Offset(s / 2f, s / 2f)
-                            val boardRadius = s / 2f
+                            val center = Offset(boardS / 2f, boardS / 2f)
+                            val boardRadius = boardS / 2f
                             val score = PolarCoordinates.resolve(lastPos, center, boardRadius)
                             onDartThrown(score, lastPos)
                         }
                     }
                 }
-            }
+            },
+        contentAlignment = Alignment.TopCenter,
     ) {
-        val s = min(size.width, size.height)
-        val center = Offset(s / 2f, s / 2f)
-        val boardRadius = s / 2f
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .onSizeChanged { boardSize = it }
+        ) {
+            val s = min(size.width, size.height)
+            val center = Offset(s / 2f, s / 2f)
+            val boardRadius = s / 2f
 
-        drawDartboard(center, boardRadius, isCricket)
-        drawNumberLabels(center, boardRadius)
+            drawDartboard(center, boardRadius, isCricket)
+            drawNumberLabels(center, boardRadius)
 
-        landingMarkers.forEach { markerPos ->
-            drawLandingDot(markerPos)
-        }
+            landingMarkers.forEach { markerPos ->
+                drawLandingDot(markerPos)
+            }
 
-        magnifierPosition?.let { pos ->
-            drawMagnifier(pos, center, boardRadius, isCricket)
+            magnifierPosition?.let { pos ->
+                drawMagnifier(pos, center, boardRadius, isCricket)
+            }
         }
     }
 }
@@ -276,7 +301,6 @@ private fun DrawScope.drawMagnifier(
     val zoom = 2.0f
     val borderWidth = 5f
 
-    // Resolve score for label
     val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
     val labelText = score.displayName
     val labelPaint = android.graphics.Paint().apply {
@@ -290,7 +314,7 @@ private fun DrawScope.drawMagnifier(
     val tabHeight = labelPaint.textSize + 16f
     val tabWidth = magnifierRadius * 1.6f
 
-    // Draw dark background tab below magnifier circle for score label
+    // Tab below magnifier for score label
     val tabTop = magnifierCenter.y + magnifierRadius - borderWidth
     val tabPath = Path().apply {
         addRoundRect(
@@ -307,7 +331,7 @@ private fun DrawScope.drawMagnifier(
     drawPath(tabPath, Color(0xDD000000))
     drawPath(tabPath, Color.White, style = Stroke(width = borderWidth))
 
-    // Draw zoomed board clipped to circle
+    // Zoomed board clipped to circle
     drawIntoCanvas { canvas ->
         canvas.nativeCanvas.save()
         val clipPath = android.graphics.Path()

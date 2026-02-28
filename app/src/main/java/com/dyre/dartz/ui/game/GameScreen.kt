@@ -77,11 +77,17 @@ fun GameScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Top margin
+            Spacer(modifier = Modifier.height(16.dp))
+
             // 1. All player scores at top
             Scoreboard(
                 players = state.players,
                 currentPlayerIndex = state.currentPlayerIndex,
             )
+
+            // Push current player info + board down
+            Spacer(modifier = Modifier.weight(1f))
 
             // 2. Current player turn info with darts
             PlayerTurnBanner(
@@ -90,15 +96,13 @@ fun GameScreen(
                 dartsThisRound = state.dartsThisRound,
             )
 
-            // 3. Dartboard — fills remaining vertical space
+            // 3. Dartboard
             Dartboard(
                 onDartThrown = { score, position ->
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     viewModel.throwDart(score, position)
                 },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 2.dp),
+                modifier = Modifier.padding(horizontal = 2.dp),
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
             )
@@ -113,7 +117,7 @@ fun GameScreen(
                 OutlinedButton(
                     onClick = { viewModel.undo() },
                     modifier = Modifier.weight(1f),
-                    enabled = state.dartsThisRound.isNotEmpty(),
+                    enabled = viewModel.canUndo,
                 ) {
                     Text("Undo")
                 }
