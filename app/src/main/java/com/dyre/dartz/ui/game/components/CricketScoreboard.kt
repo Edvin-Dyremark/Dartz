@@ -2,7 +2,6 @@ package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -32,85 +32,101 @@ fun CricketScoreboard(
     deadNumbers: Set<Int>,
     modifier: Modifier = Modifier,
 ) {
-    val cricketNumbers = listOf(20, 19, 18, 17, 16, 15, 25)
+    // Numbers as columns: 15, 16, 17, 18, 19, 20, Bull
+    val cricketNumbers = listOf(15, 16, 17, 18, 19, 20, 25)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp),
     ) {
-        // Header row with player names
+        // Header row: player name label + number columns + Pts column
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Number label column
+            // Empty corner for player name column
             Box(
-                modifier = Modifier.size(width = 40.dp, height = 24.dp),
-                contentAlignment = Alignment.Center,
-            ) {}
-            players.forEachIndexed { index, playerState ->
-                val isCurrent = index == currentPlayerIndex
-                val bgColor = if (isCurrent) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                }
-                val textColor = if (isCurrent) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                modifier = Modifier
+                    .width(52.dp)
+                    .height(20.dp),
+            )
+            cricketNumbers.forEach { number ->
+                val isDead = number in deadNumbers
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                        .background(bgColor)
-                        .padding(vertical = 2.dp),
+                        .height(20.dp)
+                        .alpha(if (isDead) 0.35f else 1f),
                     contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (number == 25) "B" else number.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+            // Pts header
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Pts",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+
+        // One row per player
+        players.forEachIndexed { index, playerState ->
+            val isCurrent = index == currentPlayerIndex
+            val bgColor = if (isCurrent) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+            val textColor = if (isCurrent) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(bgColor)
+                    .padding(vertical = 1.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Player name
+                Box(
+                    modifier = Modifier
+                        .width(52.dp)
+                        .height(24.dp),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
                         text = playerState.player.name,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
-                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 4.dp),
                     )
                 }
-            }
-        }
 
-        // Cricket number rows
-        cricketNumbers.forEach { number ->
-            val isDead = number in deadNumbers
-            val rowAlpha = if (isDead) 0.35f else 1f
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .alpha(rowAlpha),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Number label
-                Box(
-                    modifier = Modifier.size(width = 40.dp, height = 24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = if (number == 25) "Bull" else number.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                // Player mark cells
-                players.forEachIndexed { index, playerState ->
-                    val isCurrent = index == currentPlayerIndex
-                    val bgColor = if (isCurrent) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    }
+                // Mark cells for each cricket number
+                cricketNumbers.forEach { number ->
+                    val isDead = number in deadNumbers
                     val marksKey = "${CricketGameEngine.MARKS_KEY_PREFIX}$number"
                     val marks = (playerState.extras[marksKey] as? Int) ?: 0
 
@@ -118,54 +134,23 @@ fun CricketScoreboard(
                         modifier = Modifier
                             .weight(1f)
                             .height(24.dp)
-                            .background(bgColor),
+                            .alpha(if (isDead) 0.35f else 1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         MarkIndicator(marks = marks)
                     }
                 }
-            }
-        }
 
-        // Score row at bottom
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier.size(width = 40.dp, height = 28.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Pts",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            players.forEachIndexed { index, playerState ->
-                val isCurrent = index == currentPlayerIndex
-                val bgColor = if (isCurrent) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                }
-                val textColor = if (isCurrent) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                // Score
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
-                        .background(bgColor)
-                        .padding(vertical = 4.dp),
+                        .width(36.dp)
+                        .height(24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = playerState.score.toString(),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = textColor,
                     )
@@ -185,12 +170,7 @@ private fun MarkIndicator(marks: Int) {
     }
 
     when {
-        marks == 0 -> {
-            Text(
-                text = "",
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
+        marks == 0 -> {}
         marks == 1 -> {
             Text(
                 text = "/",
@@ -208,7 +188,6 @@ private fun MarkIndicator(marks: Int) {
             )
         }
         else -> {
-            // 3+ marks: X inside a circle
             Box(
                 modifier = Modifier
                     .size(18.dp)
