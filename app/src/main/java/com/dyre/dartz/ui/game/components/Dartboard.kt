@@ -2,7 +2,7 @@ package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +40,7 @@ fun Dartboard(
 
     Canvas(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .aspectRatio(1f)
             .pointerInput(Unit) {
                 coroutineScope {

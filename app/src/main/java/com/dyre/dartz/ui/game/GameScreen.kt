@@ -77,7 +77,7 @@ fun GameScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // 1. All player scores at top
             Scoreboard(
@@ -87,11 +87,31 @@ fun GameScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 2. Action buttons
+            // 2. Current player turn info with darts
+            PlayerTurnBanner(
+                playerName = currentPlayer.player.name,
+                score = currentPlayer.score,
+                dartsThisRound = state.dartsThisRound,
+            )
+
+            // 3. Dartboard — fills remaining vertical space
+            Dartboard(
+                onDartThrown = { score, position ->
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    viewModel.throwDart(score, position)
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp),
+                landingMarkers = landingMarkers,
+                isCricket = viewModel.isCricket,
+            )
+
+            // 4. Action buttons at bottom
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
@@ -108,27 +128,6 @@ fun GameScreen(
                     Text("Next Turn")
                 }
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // 3. Current player turn info with darts
-            PlayerTurnBanner(
-                playerName = currentPlayer.player.name,
-                score = currentPlayer.score,
-                dartsThisRound = state.dartsThisRound,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // 4. Dartboard — takes up remaining space
-            Dartboard(
-                onDartThrown = { score, position ->
-                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    viewModel.throwDart(score, position)
-                },
-                landingMarkers = landingMarkers,
-                isCricket = viewModel.isCricket,
-            )
         }
     }
 }
