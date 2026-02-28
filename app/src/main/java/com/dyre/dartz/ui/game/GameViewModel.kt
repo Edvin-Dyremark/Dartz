@@ -116,9 +116,14 @@ class GameViewModel : ViewModel() {
     fun throwDart(score: DartScore, boardPosition: Offset? = null) {
         val current = _gameState.value ?: return
         if (current.isGameOver || current.currentDartIndex >= 3) return
-        _gameState.value = engine.processDart(current, score)
+        val newState = engine.processDart(current, score)
+        _gameState.value = newState
         boardPosition?.let {
             _landingMarkers.value = _landingMarkers.value + it
+        }
+        // Auto-advance after 3 darts
+        if (!newState.isGameOver && newState.currentDartIndex >= 3) {
+            endTurn()
         }
     }
 

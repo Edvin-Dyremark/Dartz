@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -46,26 +47,21 @@ fun Dartboard(
                 coroutineScope {
                     awaitPointerEventScope {
                         while (true) {
-                            // Wait for finger down
                             val down = awaitPointerEvent()
                             if (down.type != PointerEventType.Press) continue
                             val downPos = down.changes.first().position
 
-                            // Show magnifier immediately
                             magnifierPosition = downPos
                             down.changes.forEach { it.consume() }
 
                             var lastPos = downPos
-                            var moved = false
 
-                            // Track movement until release
                             while (true) {
                                 val event = awaitPointerEvent()
                                 when (event.type) {
                                     PointerEventType.Move -> {
                                         lastPos = event.changes.first().position
                                         magnifierPosition = lastPos
-                                        moved = true
                                         event.changes.forEach { it.consume() }
                                     }
                                     PointerEventType.Release -> {
@@ -76,7 +72,6 @@ fun Dartboard(
                                 }
                             }
 
-                            // Commit the dart at the final position
                             magnifierPosition = null
                             val s = min(size.width, size.height).toFloat()
                             val center = Offset(s / 2f, s / 2f)
@@ -95,12 +90,10 @@ fun Dartboard(
         drawDartboard(center, boardRadius, isCricket)
         drawNumberLabels(center, boardRadius)
 
-        // Draw landing markers
         landingMarkers.forEach { markerPos ->
             drawLandingDot(markerPos)
         }
 
-        // Draw magnifier
         magnifierPosition?.let { pos ->
             drawMagnifier(pos, center, boardRadius, isCricket)
         }
@@ -110,15 +103,15 @@ fun Dartboard(
 private fun DrawScope.drawLandingDot(position: Offset) {
     drawCircle(
         color = Color.White,
-        radius = 6f,
+        radius = 10f,
         center = position,
         style = Fill,
     )
     drawCircle(
         color = Color.Black,
-        radius = 6f,
+        radius = 10f,
         center = position,
-        style = Stroke(width = 2f),
+        style = Stroke(width = 3f),
     )
 }
 
@@ -132,7 +125,6 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float, isCricke
         DartboardGeometry.INNER_SINGLE_OUTER to DartboardGeometry.Ring.INNER_SINGLE,
     )
 
-    // Draw from outside in
     for (segIdx in 0 until 20) {
         val segment = DartboardGeometry.SEGMENT_ORDER[segIdx]
         val startAngle = DartboardGeometry.START_ANGLE_OFFSET + segIdx * DartboardGeometry.SEGMENT_ANGLE
@@ -166,20 +158,17 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float, isCricke
         }
     }
 
-    // Outer bull
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.OUTER_BULL),
         radius = DartboardGeometry.OUTER_BULL_OUTER * boardRadius,
         center = center,
     )
-    // Bull's eye
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.BULLSEYE),
         radius = DartboardGeometry.BULLSEYE_OUTER * boardRadius,
         center = center,
     )
 
-    // Wire rings
     val wireColor = Color(0xFF888888)
     val wireWidth = 1.5f
     listOf(
@@ -198,7 +187,6 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float, isCricke
         )
     }
 
-    // Wire segment lines
     for (segIdx in 0 until 20) {
         val angleDeg = DartboardGeometry.START_ANGLE_OFFSET + segIdx * DartboardGeometry.SEGMENT_ANGLE
         val angleRad = Math.toRadians(angleDeg.toDouble() - 90.0)
@@ -230,7 +218,6 @@ private fun DrawScope.drawAnnularSector(
     val steps = 32
     val path = Path()
 
-    // Outer arc (clockwise)
     for (i in 0..steps) {
         val angle = Math.toRadians((startAngleDeg + sweepAngleDeg * i / steps - 90f).toDouble())
         val x = center.x + outerRadius * cos(angle).toFloat()
@@ -238,7 +225,6 @@ private fun DrawScope.drawAnnularSector(
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
 
-    // Inner arc (counter-clockwise)
     for (i in steps downTo 0) {
         val angle = Math.toRadians((startAngleDeg + sweepAngleDeg * i / steps - 90f).toDouble())
         val x = center.x + innerRadius * cos(angle).toFloat()
@@ -254,10 +240,11 @@ private fun DrawScope.drawNumberLabels(center: Offset, boardRadius: Float) {
     val labelRadius = boardRadius * ((DartboardGeometry.OUTER_SINGLE_OUTER + DartboardGeometry.DOUBLE_OUTER) / 2f)
     val textPaint = android.graphics.Paint().apply {
         this.color = android.graphics.Color.WHITE
-        textSize = boardRadius * 0.055f
+        textSize = boardRadius * 0.075f
         textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
         isAntiAlias = true
+        setShadowLayer(3f, 0f, 0f, android.graphics.Color.BLACK)
     }
 
     drawIntoCanvas { canvas ->
@@ -287,7 +274,40 @@ private fun DrawScope.drawMagnifier(
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
     val zoom = 2.0f
+    val borderWidth = 5f
 
+    // Resolve score for label
+    val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
+    val labelText = score.displayName
+    val labelPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = boardRadius * 0.065f
+        textAlign = android.graphics.Paint.Align.CENTER
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        isAntiAlias = true
+    }
+
+    val tabHeight = labelPaint.textSize + 16f
+    val tabWidth = magnifierRadius * 1.6f
+
+    // Draw dark background tab below magnifier circle for score label
+    val tabTop = magnifierCenter.y + magnifierRadius - borderWidth
+    val tabPath = Path().apply {
+        addRoundRect(
+            RoundRect(
+                left = magnifierCenter.x - tabWidth / 2f,
+                top = tabTop,
+                right = magnifierCenter.x + tabWidth / 2f,
+                bottom = tabTop + tabHeight,
+                radiusX = 12f,
+                radiusY = 12f,
+            )
+        )
+    }
+    drawPath(tabPath, Color(0xDD000000))
+    drawPath(tabPath, Color.White, style = Stroke(width = borderWidth))
+
+    // Draw zoomed board clipped to circle
     drawIntoCanvas { canvas ->
         canvas.nativeCanvas.save()
         val clipPath = android.graphics.Path()
@@ -305,49 +325,23 @@ private fun DrawScope.drawMagnifier(
         canvas.nativeCanvas.restore()
     }
 
-    // Magnifier border
+    // Circle border
     drawCircle(
         color = Color.White,
         radius = magnifierRadius,
         center = magnifierCenter,
-        style = Stroke(width = 3f),
+        style = Stroke(width = borderWidth),
     )
 
-    // Aiming dot in magnifier center (same style as landing markers)
+    // Aiming dot
     drawLandingDot(magnifierCenter)
 
-    // Score label below magnifier
-    val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
-    val labelText = score.displayName
-    val labelPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textSize = boardRadius * 0.06f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isAntiAlias = true
-        isFakeBoldText = true
-    }
-    val labelY = magnifierCenter.y + magnifierRadius + labelPaint.textSize + 8f
-    val textWidth = labelPaint.measureText(labelText)
-    val pillPadH = 16f
-    val pillPadV = 6f
-    val bgPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(180, 0, 0, 0)
-        isAntiAlias = true
-    }
-
+    // Score text inside tab
     drawIntoCanvas { canvas ->
-        canvas.nativeCanvas.drawRoundRect(
-            magnifierCenter.x - textWidth / 2f - pillPadH,
-            labelY - labelPaint.textSize - pillPadV,
-            magnifierCenter.x + textWidth / 2f + pillPadH,
-            labelY + pillPadV,
-            16f, 16f,
-            bgPaint,
-        )
         canvas.nativeCanvas.drawText(
             labelText,
             magnifierCenter.x,
-            labelY,
+            tabTop + tabHeight / 2f + labelPaint.textSize / 3f,
             labelPaint,
         )
     }

@@ -77,15 +77,11 @@ fun GameScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
-
             // 1. All player scores at top
             Scoreboard(
                 players = state.players,
                 currentPlayerIndex = state.currentPlayerIndex,
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
 
             // 2. Current player turn info with darts
             PlayerTurnBanner(
@@ -102,7 +98,7 @@ fun GameScreen(
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 2.dp),
                 landingMarkers = landingMarkers,
                 isCricket = viewModel.isCricket,
             )
@@ -111,7 +107,7 @@ fun GameScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
