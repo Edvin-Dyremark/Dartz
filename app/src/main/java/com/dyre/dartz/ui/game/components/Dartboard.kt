@@ -51,7 +51,7 @@ fun Dartboard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 80.dp, bottom = 120.dp)
+            .padding(top = 60.dp, bottom = 80.dp)
             .pointerInput(Unit) {
                 coroutineScope {
                     awaitPointerEventScope {
@@ -298,7 +298,7 @@ private fun DrawScope.drawMagnifier(
 ) {
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
-    val zoom = 2.0f
+    val zoom = 1.5f
     val borderWidth = 8f
     val outlineWidth = 6f
 
