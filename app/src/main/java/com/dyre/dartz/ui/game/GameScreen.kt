@@ -77,24 +77,22 @@ fun GameScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Top margin
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 1. All player scores at top
-            Scoreboard(
-                players = state.players,
-                currentPlayerIndex = state.currentPlayerIndex,
-            )
-
-            // Push current player info + board down
-            Spacer(modifier = Modifier.weight(1f))
-
-            // 2. Current player turn info with darts
+            // 1. Current player turn info with darts
             PlayerTurnBanner(
                 playerName = currentPlayer.player.name,
                 score = currentPlayer.score,
                 dartsThisRound = state.dartsThisRound,
             )
+
+            // 2. All player scores
+            Spacer(modifier = Modifier.height(8.dp))
+            Scoreboard(
+                players = state.players,
+                currentPlayerIndex = state.currentPlayerIndex,
+            )
+
+            // Small gap before dartboard
+            Spacer(modifier = Modifier.height(4.dp))
 
             // 3. Dartboard
             Dartboard(

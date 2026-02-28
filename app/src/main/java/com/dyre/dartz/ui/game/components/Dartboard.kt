@@ -300,6 +300,7 @@ private fun DrawScope.drawMagnifier(
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
     val zoom = 2.0f
     val borderWidth = 5f
+    val outlineWidth = 2f
 
     val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
     val labelText = score.displayName
@@ -314,15 +315,16 @@ private fun DrawScope.drawMagnifier(
     val tabHeight = labelPaint.textSize + 16f
     val tabWidth = magnifierRadius * 1.6f
 
-    // Tab below magnifier for score label
-    val tabTop = magnifierCenter.y + magnifierRadius - borderWidth
+    // Tab ABOVE magnifier for score label
+    val tabBottom = magnifierCenter.y - magnifierRadius + borderWidth
+    val tabTop = tabBottom - tabHeight
     val tabPath = Path().apply {
         addRoundRect(
             RoundRect(
                 left = magnifierCenter.x - tabWidth / 2f,
                 top = tabTop,
                 right = magnifierCenter.x + tabWidth / 2f,
-                bottom = tabTop + tabHeight,
+                bottom = tabBottom,
                 radiusX = 12f,
                 radiusY = 12f,
             )
@@ -349,7 +351,15 @@ private fun DrawScope.drawMagnifier(
         canvas.nativeCanvas.restore()
     }
 
-    // Circle border
+    // Dark outline behind white border for contrast
+    drawCircle(
+        color = Color.Black,
+        radius = magnifierRadius + borderWidth / 2f + outlineWidth,
+        center = magnifierCenter,
+        style = Stroke(width = outlineWidth),
+    )
+
+    // White circle border
     drawCircle(
         color = Color.White,
         radius = magnifierRadius,
@@ -357,10 +367,21 @@ private fun DrawScope.drawMagnifier(
         style = Stroke(width = borderWidth),
     )
 
-    // Aiming dot
-    drawLandingDot(magnifierCenter)
+    // Larger aiming dot in magnifier center
+    drawCircle(
+        color = Color.White,
+        radius = 14f,
+        center = magnifierCenter,
+        style = Fill,
+    )
+    drawCircle(
+        color = Color.Black,
+        radius = 14f,
+        center = magnifierCenter,
+        style = Stroke(width = 3f),
+    )
 
-    // Score text inside tab
+    // Score text inside tab above
     drawIntoCanvas { canvas ->
         canvas.nativeCanvas.drawText(
             labelText,
