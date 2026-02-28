@@ -1,8 +1,6 @@
 package com.dyre.dartz.ui.game.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -19,10 +17,12 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import com.dyre.dartz.model.DartScore
 import com.dyre.dartz.util.DartboardGeometry
 import com.dyre.dartz.util.PolarCoordinates
+import kotlinx.coroutines.coroutineScope
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -37,48 +37,55 @@ fun Dartboard(
     isCricket: Boolean = false,
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
-    var isDragging by remember { mutableStateOf(false) }
 
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .pointerInput(Unit) {
-                detectTapGestures { tapOffset ->
-                    if (!isDragging) {
-                        val s = min(size.width, size.height).toFloat()
-                        val center = Offset(s / 2f, s / 2f)
-                        val boardRadius = s / 2f
-                        val score = PolarCoordinates.resolve(tapOffset, center, boardRadius)
-                        onDartThrown(score, tapOffset)
-                    }
-                }
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        magnifierPosition = offset
-                    },
-                    onDrag = { change, _ ->
-                        magnifierPosition = change.position
-                    },
-                    onDragEnd = {
-                        magnifierPosition?.let { pos ->
+                coroutineScope {
+                    awaitPointerEventScope {
+                        while (true) {
+                            // Wait for finger down
+                            val down = awaitPointerEvent()
+                            if (down.type != PointerEventType.Press) continue
+                            val downPos = down.changes.first().position
+
+                            // Show magnifier immediately
+                            magnifierPosition = downPos
+                            down.changes.forEach { it.consume() }
+
+                            var lastPos = downPos
+                            var moved = false
+
+                            // Track movement until release
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                when (event.type) {
+                                    PointerEventType.Move -> {
+                                        lastPos = event.changes.first().position
+                                        magnifierPosition = lastPos
+                                        moved = true
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                    PointerEventType.Release -> {
+                                        event.changes.forEach { it.consume() }
+                                        break
+                                    }
+                                    else -> break
+                                }
+                            }
+
+                            // Commit the dart at the final position
+                            magnifierPosition = null
                             val s = min(size.width, size.height).toFloat()
                             val center = Offset(s / 2f, s / 2f)
                             val boardRadius = s / 2f
-                            val score = PolarCoordinates.resolve(pos, center, boardRadius)
-                            onDartThrown(score, pos)
+                            val score = PolarCoordinates.resolve(lastPos, center, boardRadius)
+                            onDartThrown(score, lastPos)
                         }
-                        magnifierPosition = null
-                        isDragging = false
-                    },
-                    onDragCancel = {
-                        magnifierPosition = null
-                        isDragging = false
-                    },
-                )
+                    }
+                }
             }
     ) {
         val s = min(size.width, size.height)
@@ -159,13 +166,13 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float, isCricke
         }
     }
 
-    // Outer bull (always active in cricket)
+    // Outer bull
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.OUTER_BULL),
         radius = DartboardGeometry.OUTER_BULL_OUTER * boardRadius,
         center = center,
     )
-    // Bull's eye (always active in cricket)
+    // Bull's eye
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.BULLSEYE),
         radius = DartboardGeometry.BULLSEYE_OUTER * boardRadius,
@@ -287,14 +294,12 @@ private fun DrawScope.drawMagnifier(
         clipPath.addCircle(magnifierCenter.x, magnifierCenter.y, magnifierRadius, android.graphics.Path.Direction.CW)
         canvas.nativeCanvas.clipPath(clipPath)
 
-        // Draw zoomed dartboard centered on the touch position
         canvas.nativeCanvas.translate(
             magnifierCenter.x - position.x * zoom,
             magnifierCenter.y - position.y * zoom,
         )
         canvas.nativeCanvas.scale(zoom, zoom)
 
-        // Redraw the board inside the magnifier
         drawDartboard(boardCenter, boardRadius, isCricket)
 
         canvas.nativeCanvas.restore()

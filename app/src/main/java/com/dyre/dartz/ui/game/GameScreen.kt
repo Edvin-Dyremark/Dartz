@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,64 +70,66 @@ fun GameScreen(
 
     val currentPlayer = state.players[state.currentPlayerIndex]
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 1. All player scores at top
-        Scoreboard(
-            players = state.players,
-            currentPlayerIndex = state.currentPlayerIndex,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // 2. Action buttons
-        Row(
+    Scaffold { padding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxSize()
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            OutlinedButton(
-                onClick = { viewModel.undo() },
-                modifier = Modifier.weight(1f),
-                enabled = state.dartsThisRound.isNotEmpty(),
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 1. All player scores at top
+            Scoreboard(
+                players = state.players,
+                currentPlayerIndex = state.currentPlayerIndex,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 2. Action buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Undo")
+                OutlinedButton(
+                    onClick = { viewModel.undo() },
+                    modifier = Modifier.weight(1f),
+                    enabled = state.dartsThisRound.isNotEmpty(),
+                ) {
+                    Text("Undo")
+                }
+                Button(
+                    onClick = { viewModel.endTurn() },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Next Turn")
+                }
             }
-            Button(
-                onClick = { viewModel.endTurn() },
-                modifier = Modifier.weight(1f),
-            ) {
-                Text("Next Turn")
-            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 3. Current player turn info with darts
+            PlayerTurnBanner(
+                playerName = currentPlayer.player.name,
+                score = currentPlayer.score,
+                dartsThisRound = state.dartsThisRound,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 4. Dartboard — takes up remaining space
+            Dartboard(
+                onDartThrown = { score, position ->
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    viewModel.throwDart(score, position)
+                },
+                landingMarkers = landingMarkers,
+                isCricket = viewModel.isCricket,
+            )
         }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // 3. Current player turn info with darts
-        PlayerTurnBanner(
-            playerName = currentPlayer.player.name,
-            score = currentPlayer.score,
-            dartsThisRound = state.dartsThisRound,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // 4. Dartboard — takes up remaining space
-        Dartboard(
-            onDartThrown = { score, position ->
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                viewModel.throwDart(score, position)
-            },
-            landingMarkers = landingMarkers,
-            isCricket = viewModel.isCricket,
-        )
     }
 }
 
@@ -136,54 +139,56 @@ private fun MiddlingScreen(
     landingMarkers: List<Offset>,
     onDartThrown: (position: Offset, center: Offset, radius: Float) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Middling",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = state.message ?: "Throw at the bull to determine order",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (state.middlingPlayerIndex < state.players.size) {
-            val currentMiddler = state.players[state.middlingPlayerIndex]
             Text(
-                text = "${currentMiddler.player.name}'s throw",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.secondary,
+                text = "Middling",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = state.message ?: "Throw at the bull to determine order",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val size = constraints.maxWidth.toFloat()
-                val center = Offset(size / 2f, size / 2f)
-                val boardRadius = size / 2f
-
-                Dartboard(
-                    onDartThrown = { _, position ->
-                        onDartThrown(position, center, boardRadius)
-                    },
-                    landingMarkers = landingMarkers,
+            if (state.middlingPlayerIndex < state.players.size) {
+                val currentMiddler = state.players[state.middlingPlayerIndex]
+                Text(
+                    text = "${currentMiddler.player.name}'s throw",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val size = constraints.maxWidth.toFloat()
+                    val center = Offset(size / 2f, size / 2f)
+                    val boardRadius = size / 2f
+
+                    Dartboard(
+                        onDartThrown = { _, position ->
+                            onDartThrown(position, center, boardRadius)
+                        },
+                        landingMarkers = landingMarkers,
+                    )
+                }
             }
         }
     }
