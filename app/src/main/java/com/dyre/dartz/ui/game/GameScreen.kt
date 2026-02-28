@@ -98,19 +98,11 @@ fun GameScreen(
 
             // 2. Current player name + score + darts
             Spacer(modifier = Modifier.height(8.dp))
-            if (viewModel.isCricket) {
-                Text(
-                    text = currentPlayer.player.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            } else {
-                PlayerTurnBanner(
-                    playerName = currentPlayer.player.name,
-                    score = currentPlayer.score,
-                    dartsThisRound = state.dartsThisRound,
-                )
-            }
+            PlayerTurnBanner(
+                playerName = currentPlayer.player.name,
+                score = currentPlayer.score,
+                dartsThisRound = state.dartsThisRound,
+            )
 
             // 3. Dartboard — weight(1f) fills remaining space, touch works in all of it
             Dartboard(
