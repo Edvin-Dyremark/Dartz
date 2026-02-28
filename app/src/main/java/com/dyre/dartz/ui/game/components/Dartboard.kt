@@ -145,7 +145,7 @@ private fun DrawScope.drawLandingDot(position: Offset) {
 
 private val DARKEN_OVERLAY = Color(0xAA000000)
 
-private val ACTIVE_HIGHLIGHT = Color(0x66FFFFFF)
+private val ACTIVE_HIGHLIGHT = Color(0xCC00E676)
 
 private fun DrawScope.drawDartboard(
     center: Offset,
@@ -200,7 +200,7 @@ private fun DrawScope.drawDartboard(
                     startAngleDeg = startAngle,
                     sweepAngleDeg = DartboardGeometry.SEGMENT_ANGLE,
                     color = ACTIVE_HIGHLIGHT,
-                    strokeWidth = 3f,
+                    strokeWidth = 5f,
                 )
             }
         }
@@ -232,7 +232,7 @@ private fun DrawScope.drawDartboard(
             color = ACTIVE_HIGHLIGHT,
             radius = DartboardGeometry.OUTER_BULL_OUTER * boardRadius,
             center = center,
-            style = Stroke(width = 3f),
+            style = Stroke(width = 5f),
         )
     }
 
