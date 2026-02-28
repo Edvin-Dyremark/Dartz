@@ -299,8 +299,8 @@ private fun DrawScope.drawMagnifier(
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
     val zoom = 2.0f
-    val borderWidth = 5f
-    val outlineWidth = 2f
+    val borderWidth = 6f
+    val outlineWidth = 4f
 
     val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
     val labelText = score.displayName
@@ -312,11 +312,11 @@ private fun DrawScope.drawMagnifier(
         isAntiAlias = true
     }
 
-    val tabHeight = labelPaint.textSize + 16f
-    val tabWidth = magnifierRadius * 1.6f
+    val tabHeight = labelPaint.textSize + 32f
+    val tabWidth = magnifierRadius * 1.8f
 
-    // Tab ABOVE magnifier for score label
-    val tabBottom = magnifierCenter.y - magnifierRadius + borderWidth
+    // Tab ABOVE magnifier for score label (gap between tab and circle)
+    val tabBottom = magnifierCenter.y - magnifierRadius - outlineWidth - 4f
     val tabTop = tabBottom - tabHeight
     val tabPath = Path().apply {
         addRoundRect(
@@ -354,7 +354,7 @@ private fun DrawScope.drawMagnifier(
     // Dark outline behind white border for contrast
     drawCircle(
         color = Color.Black,
-        radius = magnifierRadius + borderWidth / 2f + outlineWidth,
+        radius = magnifierRadius + borderWidth / 2f + outlineWidth / 2f,
         center = magnifierCenter,
         style = Stroke(width = outlineWidth),
     )
@@ -365,6 +365,14 @@ private fun DrawScope.drawMagnifier(
         radius = magnifierRadius,
         center = magnifierCenter,
         style = Stroke(width = borderWidth),
+    )
+
+    // Inner dark outline for extra contrast
+    drawCircle(
+        color = Color.Black,
+        radius = magnifierRadius - borderWidth / 2f - outlineWidth / 2f,
+        center = magnifierCenter,
+        style = Stroke(width = outlineWidth),
     )
 
     // Larger aiming dot in magnifier center
