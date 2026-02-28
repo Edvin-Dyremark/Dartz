@@ -125,6 +125,7 @@ fun GameScreen(
                 viewModel.throwDart(score, position)
             },
             landingMarkers = landingMarkers,
+            isCricket = viewModel.isCricket,
         )
     }
 }

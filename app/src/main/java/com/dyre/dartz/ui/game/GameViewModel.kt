@@ -28,6 +28,8 @@ class GameViewModel : ViewModel() {
     private lateinit var gameMode: GameMode
     private lateinit var playerList: List<Player>
 
+    val isCricket: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Cricket
+
     fun initialize(modeArg: String, playersArg: String) {
         if (_gameState.value != null) return
 

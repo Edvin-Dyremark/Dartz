@@ -16,10 +16,10 @@ object DartboardGeometry {
     // Ring radius fractions (of total board radius)
     const val BULLSEYE_OUTER = 0.07f
     const val OUTER_BULL_OUTER = 0.15f
-    const val INNER_SINGLE_OUTER = 0.49f
-    const val TRIPLE_OUTER = 0.55f
-    const val OUTER_SINGLE_OUTER = 0.85f
-    const val DOUBLE_OUTER = 0.92f
+    const val INNER_SINGLE_OUTER = 0.46f
+    const val TRIPLE_OUTER = 0.58f
+    const val OUTER_SINGLE_OUTER = 0.82f
+    const val DOUBLE_OUTER = 0.95f
 
     // Each segment spans 18 degrees (360 / 20)
     const val SEGMENT_ANGLE = 18f

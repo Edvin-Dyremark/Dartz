@@ -27,11 +27,14 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
+private val CRICKET_NUMBERS = setOf(15, 16, 17, 18, 19, 20, 25)
+
 @Composable
 fun Dartboard(
     onDartThrown: (DartScore, Offset) -> Unit,
     modifier: Modifier = Modifier,
     landingMarkers: List<Offset> = emptyList(),
+    isCricket: Boolean = false,
 ) {
     var magnifierPosition by remember { mutableStateOf<Offset?>(null) }
     var isDragging by remember { mutableStateOf(false) }
@@ -82,33 +85,39 @@ fun Dartboard(
         val center = Offset(s / 2f, s / 2f)
         val boardRadius = s / 2f
 
-        drawDartboard(center, boardRadius)
+        drawDartboard(center, boardRadius, isCricket)
         drawNumberLabels(center, boardRadius)
 
         // Draw landing markers
         landingMarkers.forEach { markerPos ->
-            drawCircle(
-                color = Color.White,
-                radius = 6f,
-                center = markerPos,
-                style = Fill,
-            )
-            drawCircle(
-                color = Color.Black,
-                radius = 6f,
-                center = markerPos,
-                style = Stroke(width = 2f),
-            )
+            drawLandingDot(markerPos)
         }
 
         // Draw magnifier
         magnifierPosition?.let { pos ->
-            drawMagnifier(pos, center, boardRadius)
+            drawMagnifier(pos, center, boardRadius, isCricket)
         }
     }
 }
 
-private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float) {
+private fun DrawScope.drawLandingDot(position: Offset) {
+    drawCircle(
+        color = Color.White,
+        radius = 6f,
+        center = position,
+        style = Fill,
+    )
+    drawCircle(
+        color = Color.Black,
+        radius = 6f,
+        center = position,
+        style = Stroke(width = 2f),
+    )
+}
+
+private val DARKEN_OVERLAY = Color(0xAA000000)
+
+private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float, isCricket: Boolean) {
     val rings = listOf(
         DartboardGeometry.DOUBLE_OUTER to DartboardGeometry.Ring.DOUBLE,
         DartboardGeometry.OUTER_SINGLE_OUTER to DartboardGeometry.Ring.OUTER_SINGLE,
@@ -118,7 +127,9 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float) {
 
     // Draw from outside in
     for (segIdx in 0 until 20) {
+        val segment = DartboardGeometry.SEGMENT_ORDER[segIdx]
         val startAngle = DartboardGeometry.START_ANGLE_OFFSET + segIdx * DartboardGeometry.SEGMENT_ANGLE
+        val isDimmed = isCricket && segment !in CRICKET_NUMBERS
         for ((outerFrac, ring) in rings) {
             val innerFrac = when (ring) {
                 DartboardGeometry.Ring.DOUBLE -> DartboardGeometry.OUTER_SINGLE_OUTER
@@ -135,16 +146,26 @@ private fun DrawScope.drawDartboard(center: Offset, boardRadius: Float) {
                 sweepAngleDeg = DartboardGeometry.SEGMENT_ANGLE,
                 color = DartboardGeometry.segmentColor(segIdx, ring),
             )
+            if (isDimmed) {
+                drawAnnularSector(
+                    center = center,
+                    innerRadius = innerFrac * boardRadius,
+                    outerRadius = outerFrac * boardRadius,
+                    startAngleDeg = startAngle,
+                    sweepAngleDeg = DartboardGeometry.SEGMENT_ANGLE,
+                    color = DARKEN_OVERLAY,
+                )
+            }
         }
     }
 
-    // Outer bull
+    // Outer bull (always active in cricket)
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.OUTER_BULL),
         radius = DartboardGeometry.OUTER_BULL_OUTER * boardRadius,
         center = center,
     )
-    // Bull's eye
+    // Bull's eye (always active in cricket)
     drawCircle(
         color = DartboardGeometry.segmentColor(0, DartboardGeometry.Ring.BULLSEYE),
         radius = DartboardGeometry.BULLSEYE_OUTER * boardRadius,
@@ -254,6 +275,7 @@ private fun DrawScope.drawMagnifier(
     position: Offset,
     boardCenter: Offset,
     boardRadius: Float,
+    isCricket: Boolean,
 ) {
     val magnifierRadius = boardRadius * 0.4f
     val magnifierCenter = Offset(position.x, position.y - magnifierRadius * 2.5f)
@@ -273,7 +295,7 @@ private fun DrawScope.drawMagnifier(
         canvas.nativeCanvas.scale(zoom, zoom)
 
         // Redraw the board inside the magnifier
-        drawDartboard(boardCenter, boardRadius)
+        drawDartboard(boardCenter, boardRadius, isCricket)
 
         canvas.nativeCanvas.restore()
     }
@@ -286,10 +308,8 @@ private fun DrawScope.drawMagnifier(
         style = Stroke(width = 3f),
     )
 
-    // Crosshair in magnifier
-    val crossSize = 10f
-    drawLine(Color.White, Offset(magnifierCenter.x - crossSize, magnifierCenter.y), Offset(magnifierCenter.x + crossSize, magnifierCenter.y), strokeWidth = 2f)
-    drawLine(Color.White, Offset(magnifierCenter.x, magnifierCenter.y - crossSize), Offset(magnifierCenter.x, magnifierCenter.y + crossSize), strokeWidth = 2f)
+    // Aiming dot in magnifier center (same style as landing markers)
+    drawLandingDot(magnifierCenter)
 
     // Score label below magnifier
     val score = PolarCoordinates.resolve(position, boardCenter, boardRadius)
