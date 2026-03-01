@@ -33,6 +33,10 @@ class GameViewModel : ViewModel() {
     val isCricket: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Cricket
     val isKiller: Boolean get() = ::gameMode.isInitialized && gameMode is GameMode.Killer
 
+    private val _killerMiddling = MutableStateFlow(false)
+    val killerMiddling: StateFlow<Boolean> = _killerMiddling.asStateFlow()
+    private var killerMiddlingShown = false
+
     val canUndo: Boolean get() = _gameState.value?.previousState != null
 
     fun initialize(modeArg: String, playersArg: String) {
@@ -86,6 +90,28 @@ class GameViewModel : ViewModel() {
         startGame(listOf(winner) + others)
     }
 
+    fun selectKillerFirstPlayer(playerId: Int) {
+        val current = _gameState.value ?: return
+        val winnerIdx = current.players.indexOfFirst { it.player.id == playerId }
+        if (winnerIdx < 0) return
+
+        // Reorder: winner first, then others in original cyclic order
+        val reordered = (winnerIdx until winnerIdx + current.players.size).map {
+            current.players[it % current.players.size]
+        }
+
+        _gameState.value = current.copy(
+            players = reordered,
+            currentPlayerIndex = 0,
+            currentDartIndex = 0,
+            dartsThisRound = emptyList(),
+            message = "All numbers claimed — game on!",
+        )
+        _killerMiddling.value = false
+        _landingMarkers.value = emptyList()
+        markerHistory.clear()
+    }
+
     private fun startGame(orderedPlayers: List<Player>) {
         _landingMarkers.value = emptyList()
         markerHistory.clear()
@@ -122,6 +148,21 @@ class GameViewModel : ViewModel() {
 
     fun endTurn() {
         val current = _gameState.value ?: return
+
+        // Check if killer claiming just completed — show middling before continuing
+        if (isKiller && !killerMiddlingShown) {
+            val allClaimed = current.players.all {
+                (it.extras[KillerGameEngine.CLAIMED_NUMBER_KEY] as? Int ?: 0) > 0
+            }
+            if (allClaimed) {
+                killerMiddlingShown = true
+                _killerMiddling.value = true
+                _landingMarkers.value = emptyList()
+                markerHistory.clear()
+                return
+            }
+        }
+
         // Save marker state before end turn for undo
         markerHistory.add(_landingMarkers.value)
         _gameState.value = engine.endTurn(current)

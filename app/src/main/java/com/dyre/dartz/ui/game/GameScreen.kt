@@ -46,6 +46,8 @@ fun GameScreen(
         viewModel.initialize(modeArg, playersArg)
     }
 
+    val killerMiddling by viewModel.killerMiddling.collectAsStateWithLifecycle()
+
     val state = gameState ?: return
 
     LaunchedEffect(state.isGameOver) {
@@ -77,6 +79,14 @@ fun GameScreen(
         MiddlingScreen(
             players = state.players,
             onPlayerSelected = { playerId -> viewModel.selectFirstPlayer(playerId) },
+        )
+        return
+    }
+
+    if (killerMiddling) {
+        MiddlingScreen(
+            players = state.players,
+            onPlayerSelected = { playerId -> viewModel.selectKillerFirstPlayer(playerId) },
         )
         return
     }

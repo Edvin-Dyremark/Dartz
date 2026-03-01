@@ -155,7 +155,7 @@ fun KillerScoreboard(
                     )
                 }
 
-                // Status: /, X for marks, K for killer
+                // Status: /, X for marks, K for killer (dimmed if lost killer)
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -164,15 +164,15 @@ fun KillerScoreboard(
                 ) {
                     if (claimedNumber > 0) {
                         val statusText = when {
-                            isKiller -> "K"
+                            marks >= 3 -> "K"
                             marks == 2 -> "X"
                             marks == 1 -> "/"
                             else -> ""
                         }
-                        val statusColor = if (isKiller) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            textColor
+                        val statusColor = when {
+                            isKiller -> MaterialTheme.colorScheme.primary
+                            marks >= 3 -> textColor.copy(alpha = 0.4f)
+                            else -> textColor
                         }
                         if (statusText.isNotEmpty()) {
                             Text(
